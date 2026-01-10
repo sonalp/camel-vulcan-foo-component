@@ -15,6 +15,8 @@ import org.apache.camel.component.protojson.internal.registry.FieldConverterRegi
 import org.apache.camel.component.protojson.internal.registry.MetaRegistry.MessageMeta;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Core streaming JSON parser for converting JSON to Protobuf messages.
@@ -23,6 +25,26 @@ import java.io.IOException;
  * and may change without notice.
  */
 public final class ProtoJsonStreamer {
+
+    /**
+     * Cache for common integer map keys (0-9999).
+     * Avoids Integer.parseInt() allocation overhead for frequently used keys.
+     */
+    private static final Map<String, Integer> INT_KEY_CACHE;
+    private static final Map<String, Long> LONG_KEY_CACHE;
+
+    static {
+        // Pre-populate cache with common integer keys
+        INT_KEY_CACHE = new HashMap<>(10000);
+        LONG_KEY_CACHE = new HashMap<>(1000);
+
+        for (int i = 0; i < 10000; i++) {
+            INT_KEY_CACHE.put(String.valueOf(i), i);
+        }
+        for (long i = 0; i < 1000; i++) {
+            LONG_KEY_CACHE.put(String.valueOf(i), i);
+        }
+    }
 
     private ProtoJsonStreamer() {}
 
@@ -351,6 +373,10 @@ public final class ProtoJsonStreamer {
         FieldConverterRegistry<JsonInMapConverter> mapRegistry = cfg.getMapConverterRegistry();
         JsonInMapConverter mapConverter = mapRegistry.findConverter(fd);
 
+        // OPTIMIZATION: Reuse entry builder to avoid allocation per entry
+        // This reduces heap pressure significantly for large maps (1000+ entries)
+        Message.Builder entryBuilder = DynamicMessage.newBuilder(entryDesc);
+
         while ((t = p.nextToken()) != JsonToken.END_OBJECT) {
             if (t != JsonToken.FIELD_NAME) {
                 p.skipChildren();
@@ -362,7 +388,8 @@ public final class ProtoJsonStreamer {
 
             Object keyValue = convertMapKey(jsonKey, keyFd);
 
-            Message.Builder entryBuilder = DynamicMessage.newBuilder(entryDesc);
+            // OPTIMIZATION: Clear builder instead of creating new one
+            entryBuilder.clear();
             entryBuilder.setField(keyFd, keyValue);
 
             if (valToken == JsonToken.VALUE_NULL && cfg.isAllowNullForScalars()) {
@@ -406,6 +433,13 @@ public final class ProtoJsonStreamer {
         return switch (keyFd.getJavaType()) {
             case STRING -> jsonKey;
             case INT -> {
+                // OPTIMIZATION: Use cache for common integer keys (0-9999)
+                // Avoids Integer.parseInt() and boxing allocation
+                Integer cached = INT_KEY_CACHE.get(jsonKey);
+                if (cached != null) {
+                    yield cached;
+                }
+                // Fallback for uncommon keys
                 try {
                     yield Integer.parseInt(jsonKey);
                 } catch (NumberFormatException e) {
@@ -417,6 +451,12 @@ public final class ProtoJsonStreamer {
                 }
             }
             case LONG -> {
+                // OPTIMIZATION: Use cache for common long keys (0-999)
+                Long cached = LONG_KEY_CACHE.get(jsonKey);
+                if (cached != null) {
+                    yield cached;
+                }
+                // Fallback for uncommon keys
                 try {
                     yield Long.parseLong(jsonKey);
                 } catch (NumberFormatException e) {
