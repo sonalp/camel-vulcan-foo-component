@@ -1,0 +1,105 @@
+// src/test/proto/test_messages.proto
+
+syntax = "proto3";
+
+package org.apache.camel.component.protojson.test;
+
+option java_package = "org.apache.camel.component.protojson.test.proto";
+option java_multiple_files = true;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/wrappers.proto";
+
+
+message BigDecimal {
+  int64 unscaled_value = 1;
+  int32 scale = 2;
+}
+
+message OrderMessage {
+  string order_id = 1;
+  BigDecimal amount = 2;
+  BigDecimal tax_amount = 3;
+}
+
+// Basit mesaj
+message SimpleUser {
+    string name = 1;
+    int32 age = 2;
+    string email = 3;
+    bool active = 4;
+}
+
+// Enum içeren mesaj
+enum UserStatus {
+    UNKNOWN = 0;
+    ACTIVE = 1;
+    INACTIVE = 2;
+    SUSPENDED = 3;
+}
+
+message UserWithStatus {
+    string name = 1;
+    UserStatus status = 2;
+}
+
+// Nested mesaj
+message Address {
+    string street = 1;
+    string city = 2;
+    string country = 3;
+    int32 zip_code = 4;
+}
+
+message UserWithAddress {
+    string name = 1;
+    Address address = 2;
+}
+
+// Repeated fields
+message UserWithTags {
+    string name = 1;
+    repeated string tags = 2;
+    repeated int32 scores = 3;
+    repeated Address addresses = 4;
+    repeated UserStatus statuses = 5;
+}
+
+// Map fields
+message UserWithMetadata {
+    string name = 1;
+    map<string, string> string_meta = 2;
+    map<string, int32> int_meta = 3;
+    map<int32, string> int_key_meta = 4;
+    map<string, Address> address_map = 5;
+}
+
+// Bytes field
+message FileMessage {
+    string filename = 1;
+    bytes content = 2;
+    repeated bytes chunks = 3;
+}
+
+// Well-known types
+message EventMessage {
+    string event_id = 1;
+    google.protobuf.Timestamp created_at = 2;
+    google.protobuf.Duration duration = 3;
+    google.protobuf.Struct metadata = 4;
+    google.protobuf.Any payload = 5;
+    google.protobuf.StringValue optional_note = 6;
+    google.protobuf.Int32Value optional_count = 7;
+}
+
+// Karmaşık nested yapı
+message ComplexMessage {
+    string id = 1;
+    SimpleUser user = 2;
+    repeated EventMessage events = 3;
+    map<string, UserWithAddress> user_map = 4;
+    google.protobuf.Timestamp updated_at = 5;
+}
