@@ -1,7 +1,6 @@
 package org.apache.camel.component.protojson.internal.parser;
 
 import com.google.protobuf.Descriptors;
-import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.Message;
 
 import java.lang.invoke.MethodHandle;
@@ -10,60 +9,86 @@ import java.lang.invoke.MethodType;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Helper for optimizing operations on protoc-generated message classes.
+ * MethodHandle-based optimizer for protoc-generated message classes.
  *
- * <p>Provides fast-path optimizations by using native builder methods
- * instead of generic Message.Builder reflection-based operations.
+ * <p>Uses cached MethodHandles to invoke native builder methods (setXxx, addXxx, putXxx)
+ * providing near-native performance instead of generic reflection-based operations.
  *
- * <p><strong>INTERNAL USE ONLY</strong> - This class is not part of the public API
- * and may change without notice.
+ * <p><strong>INTERNAL USE ONLY</strong>
  */
 final class GeneratedMessageHelper {
 
-    /**
-     * Cache for map field put methods.
-     * Key format: "ClassName#putFieldName"
-     * Value: MethodHandle for putFieldName(K key, V value) method
-     */
-    private static final ConcurrentHashMap<String, MethodHandle> MAP_PUT_CACHE
-        = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, MethodHandle> METHOD_CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Class<?>, Boolean> GENERATED_CLASS_CACHE = new ConcurrentHashMap<>();
+
+    private GeneratedMessageHelper() {}
 
     /**
-     * Cache for checking if a builder class is generated.
-     * Avoids repeated instanceof checks.
+     * Sets a single field value using native setXxx() method.
+     * @return true if successful, false to use fallback
      */
-    private static final ConcurrentHashMap<Class<?>, Boolean> IS_GENERATED_CACHE
-        = new ConcurrentHashMap<>();
+    static boolean setField(Message.Builder builder, Descriptors.FieldDescriptor fd, Object value) {
+        if (!isGenerated(builder)) return false;
 
-    private GeneratedMessageHelper() {
-        // Utility class
+        MethodHandle mh = getOrCacheSetter(builder, fd);
+        if (mh == null) return false;
+
+        try {
+            mh.invoke(builder, value);
+            return true;
+        } catch (Throwable e) {
+            return false;
+        }
     }
 
     /**
-     * Checks if the given builder is from a protoc-generated class.
-     * Generated classes extend GeneratedMessageV3.Builder.
-     *
-     * @param builder the message builder to check
-     * @return true if the builder is from a generated class
+     * Adds a repeated field element using native addXxx() method.
+     * @return true if successful, false to use fallback
      */
-    static boolean isGeneratedBuilder(Message.Builder builder) {
-        if (builder == null) {
+    static boolean addRepeated(Message.Builder builder, Descriptors.FieldDescriptor fd, Object value) {
+        if (!isGenerated(builder)) return false;
+
+        MethodHandle mh = getOrCacheAdder(builder, fd);
+        if (mh == null) return false;
+
+        try {
+            mh.invoke(builder, value);
+            return true;
+        } catch (Throwable e) {
             return false;
         }
+    }
 
-        Class<?> builderClass = builder.getClass();
-        return IS_GENERATED_CACHE.computeIfAbsent(builderClass, cls -> {
-            // Check if this builder extends GeneratedMessageV3.Builder
+    /**
+     * Puts a map entry using native putXxx(K, V) method.
+     * @return true if successful, false to use fallback
+     */
+    static boolean putMap(Message.Builder builder, Descriptors.FieldDescriptor fd, Object key, Object value) {
+        if (!isGenerated(builder)) return false;
+
+        MethodHandle mh = getOrCacheMapPutter(builder, fd);
+        if (mh == null) return false;
+
+        try {
+            mh.invoke(builder, key, value);
+            return true;
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
+    // ========== PRIVATE HELPERS ==========
+
+    private static boolean isGenerated(Message.Builder builder) {
+        if (builder == null) return false;
+
+        return GENERATED_CLASS_CACHE.computeIfAbsent(builder.getClass(), cls -> {
             Class<?> current = cls;
-            while (current != null && current != Object.class) {
-                if (current.getName().startsWith("com.google.protobuf.GeneratedMessageV3$Builder")) {
+            while (current != null) {
+                String name = current.getName();
+                if (name.startsWith("com.google.protobuf.GeneratedMessageV3") ||
+                    name.contains("$Builder")) {
                     return true;
-                }
-                // Check interfaces and superclass
-                for (Class<?> iface : current.getInterfaces()) {
-                    if (iface.getName().contains("GeneratedMessageV3")) {
-                        return true;
-                    }
                 }
                 current = current.getSuperclass();
             }
@@ -71,61 +96,55 @@ final class GeneratedMessageHelper {
         });
     }
 
-    /**
-     * Gets a cached MethodHandle for the map field's native put method.
-     *
-     * <p>For a map field "string_meta", the put method would be "putStringMeta(String, String)".
-     * Using the native put method is much faster than creating DynamicMessage entries.
-     *
-     * @param builder the generated message builder
-     * @param fieldDescriptor the map field descriptor
-     * @param keyType the Java type of the map key (Integer, Long, Boolean, String)
-     * @param valueType the Java type of the map value
-     * @return MethodHandle for the put method, or null if not found
-     */
-    static MethodHandle getMapPutMethod(
-            Message.Builder builder,
-            Descriptors.FieldDescriptor fieldDescriptor,
-            Class<?> keyType,
-            Class<?> valueType) {
+    private static MethodHandle getOrCacheSetter(Message.Builder builder, Descriptors.FieldDescriptor fd) {
+        String methodName = "set" + toCamelCase(fd.getName());
+        String key = builder.getClass().getName() + "#" + methodName;
 
-        Class<?> builderClass = builder.getClass();
-        String methodName = "put" + toCamelCase(fieldDescriptor.getName());
-        String cacheKey = builderClass.getName() + "#" + methodName;
+        return METHOD_CACHE.computeIfAbsent(key, k ->
+            findMethod(builder.getClass(), methodName, getJavaClass(fd)));
+    }
 
-        return MAP_PUT_CACHE.computeIfAbsent(cacheKey, key -> {
+    private static MethodHandle getOrCacheAdder(Message.Builder builder, Descriptors.FieldDescriptor fd) {
+        String methodName = "add" + toCamelCase(fd.getName());
+        String key = builder.getClass().getName() + "#" + methodName;
+
+        return METHOD_CACHE.computeIfAbsent(key, k ->
+            findMethod(builder.getClass(), methodName, getJavaClass(fd)));
+    }
+
+    private static MethodHandle getOrCacheMapPutter(Message.Builder builder, Descriptors.FieldDescriptor fd) {
+        String methodName = "put" + toCamelCase(fd.getName());
+        String key = builder.getClass().getName() + "#" + methodName + "_map";
+
+        return METHOD_CACHE.computeIfAbsent(key, k -> {
+            Descriptors.Descriptor entryDesc = fd.getMessageType();
+            Descriptors.FieldDescriptor keyFd = entryDesc.findFieldByName("key");
+            Descriptors.FieldDescriptor valFd = entryDesc.findFieldByName("value");
+
+            Class<?> keyClass = getJavaClass(keyFd);
+            Class<?> valClass = getJavaClass(valFd);
+
             try {
-                // Find the putXxx(K, V) method
                 MethodHandles.Lookup lookup = MethodHandles.lookup();
-                MethodType methodType = MethodType.methodType(
-                    builderClass, // Returns builder for chaining
-                    keyType,
-                    valueType
-                );
-
-                return lookup.findVirtual(builderClass, methodName, methodType);
-            } catch (NoSuchMethodException | IllegalAccessException e) {
-                // Method not found - this can happen for:
-                // 1. DynamicMessage (no generated methods)
-                // 2. Generated class without map fields
-                // Return null to fall back to DynamicMessage path
+                MethodType type = MethodType.methodType(builder.getClass(), keyClass, valClass);
+                return lookup.findVirtual(builder.getClass(), methodName, type);
+            } catch (Exception e) {
                 return null;
             }
         });
     }
 
-    /**
-     * Converts a proto field name to camelCase for method lookup.
-     *
-     * Examples:
-     * - "string_meta" -> "StringMeta"
-     * - "int_key_meta" -> "IntKeyMeta"
-     * - "addressMap" -> "AddressMap"
-     *
-     * @param protoFieldName the proto field name (snake_case or camelCase)
-     * @return camelCase version with first letter capitalized
-     */
-    static String toCamelCase(String protoFieldName) {
+    private static MethodHandle findMethod(Class<?> builderClass, String methodName, Class<?> paramType) {
+        try {
+            MethodHandles.Lookup lookup = MethodHandles.lookup();
+            MethodType type = MethodType.methodType(builderClass, paramType);
+            return lookup.findVirtual(builderClass, methodName, type);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String toCamelCase(String protoFieldName) {
         if (protoFieldName == null || protoFieldName.isEmpty()) {
             return protoFieldName;
         }
@@ -149,14 +168,7 @@ final class GeneratedMessageHelper {
         return result.toString();
     }
 
-    /**
-     * Gets the Java class for a protobuf field descriptor.
-     * Used for MethodHandle parameter type matching.
-     *
-     * @param fd the field descriptor
-     * @return the Java class representing this field type
-     */
-    static Class<?> getJavaClass(Descriptors.FieldDescriptor fd) {
+    private static Class<?> getJavaClass(Descriptors.FieldDescriptor fd) {
         return switch (fd.getJavaType()) {
             case INT -> Integer.class;
             case LONG -> Long.class;
@@ -174,94 +186,8 @@ final class GeneratedMessageHelper {
         };
     }
 
-    /**
-     * Cache for single field setter methods.
-     * Key format: "ClassName#setFieldName"
-     */
-    private static final ConcurrentHashMap<String, MethodHandle> SINGLE_FIELD_SETTER_CACHE
-        = new ConcurrentHashMap<>();
-
-    /**
-     * Cache for repeated field add methods.
-     * Key format: "ClassName#addFieldName"
-     */
-    private static final ConcurrentHashMap<String, MethodHandle> REPEATED_FIELD_ADD_CACHE
-        = new ConcurrentHashMap<>();
-
-    /**
-     * Gets a cached MethodHandle for a single field's native setter method.
-     *
-     * <p>For a field "user_name", the setter method would be "setUserName(String)".
-     * Using native setters can be slightly faster than builder.setField().
-     *
-     * @param builder the generated message builder
-     * @param fieldDescriptor the field descriptor
-     * @param valueType the Java type of the field value
-     * @return MethodHandle for the setter method, or null if not found
-     */
-    static MethodHandle getSingleFieldSetter(
-            Message.Builder builder,
-            Descriptors.FieldDescriptor fieldDescriptor,
-            Class<?> valueType) {
-
-        Class<?> builderClass = builder.getClass();
-        String methodName = "set" + toCamelCase(fieldDescriptor.getName());
-        String cacheKey = builderClass.getName() + "#" + methodName;
-
-        return SINGLE_FIELD_SETTER_CACHE.computeIfAbsent(cacheKey, key -> {
-            try {
-                MethodHandles.Lookup lookup = MethodHandles.lookup();
-                MethodType methodType = MethodType.methodType(
-                    builderClass, // Returns builder for chaining
-                    valueType
-                );
-                return lookup.findVirtual(builderClass, methodName, methodType);
-            } catch (NoSuchMethodException | IllegalAccessException e) {
-                return null; // Fallback to builder.setField()
-            }
-        });
-    }
-
-    /**
-     * Gets a cached MethodHandle for a repeated field's native add method.
-     *
-     * <p>For a repeated field "tags", the add method would be "addTags(String)".
-     *
-     * @param builder the generated message builder
-     * @param fieldDescriptor the field descriptor
-     * @param valueType the Java type of the field value
-     * @return MethodHandle for the add method, or null if not found
-     */
-    static MethodHandle getRepeatedFieldAdder(
-            Message.Builder builder,
-            Descriptors.FieldDescriptor fieldDescriptor,
-            Class<?> valueType) {
-
-        Class<?> builderClass = builder.getClass();
-        String methodName = "add" + toCamelCase(fieldDescriptor.getName());
-        String cacheKey = builderClass.getName() + "#" + methodName;
-
-        return REPEATED_FIELD_ADD_CACHE.computeIfAbsent(cacheKey, key -> {
-            try {
-                MethodHandles.Lookup lookup = MethodHandles.lookup();
-                MethodType methodType = MethodType.methodType(
-                    builderClass, // Returns builder for chaining
-                    valueType
-                );
-                return lookup.findVirtual(builderClass, methodName, methodType);
-            } catch (NoSuchMethodException | IllegalAccessException e) {
-                return null; // Fallback to builder.addRepeatedField()
-            }
-        });
-    }
-
-    /**
-     * Clears all caches. Useful for testing.
-     */
     static void clearCaches() {
-        MAP_PUT_CACHE.clear();
-        IS_GENERATED_CACHE.clear();
-        SINGLE_FIELD_SETTER_CACHE.clear();
-        REPEATED_FIELD_ADD_CACHE.clear();
+        METHOD_CACHE.clear();
+        GENERATED_CLASS_CACHE.clear();
     }
 }

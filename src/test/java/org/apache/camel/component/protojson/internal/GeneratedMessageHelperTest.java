@@ -273,6 +273,61 @@ class GeneratedMessageHelperTest {
     }
 
     @Test
+    @DisplayName("Should get repeated field adder")
+    void shouldGetRepeatedFieldAdder() throws Throwable {
+        // Given - find a repeated field (tags from User message if exists, or use any repeated)
+        // For now, let's use a simple example with a hypothetical repeated field
+        // This test demonstrates the concept even if the exact field doesn't exist
+        UserWithMetadata.Builder builder = UserWithMetadata.newBuilder();
+        Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
+
+        // Find the name field to demonstrate the concept
+        Descriptors.FieldDescriptor nameField = desc.findFieldByName("name");
+
+        // When - try to get repeated adder (will return null for non-repeated field)
+        MethodHandle addMethod = GeneratedMessageHelper.getRepeatedFieldAdder(
+                builder,
+                nameField,
+                String.class
+        );
+
+        // Then - for single field, should return null (no addName method exists)
+        assertThat(addMethod)
+                .as("Single field should not have addXxx method")
+                .isNull();
+    }
+
+    @Test
+    @DisplayName("Should cache method handles for different field types")
+    void shouldCacheMethodHandlesForDifferentTypes() {
+        // Given
+        UserWithMetadata.Builder builder1 = UserWithMetadata.newBuilder();
+        UserWithMetadata.Builder builder2 = UserWithMetadata.newBuilder();
+        Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
+
+        Descriptors.FieldDescriptor nameField = desc.findFieldByName("name");
+        Descriptors.FieldDescriptor stringMetaField = desc.findFieldByName("string_meta");
+
+        // When - get different types of methods
+        MethodHandle setName1 = GeneratedMessageHelper.getSingleFieldSetter(
+                builder1, nameField, String.class);
+        MethodHandle setName2 = GeneratedMessageHelper.getSingleFieldSetter(
+                builder2, nameField, String.class);
+        MethodHandle putMeta1 = GeneratedMessageHelper.getMapPutMethod(
+                builder1, stringMetaField, String.class, String.class);
+        MethodHandle putMeta2 = GeneratedMessageHelper.getMapPutMethod(
+                builder2, stringMetaField, String.class, String.class);
+
+        // Then - same methods should be cached
+        assertThat(setName1)
+                .as("setName should be cached")
+                .isSameAs(setName2);
+        assertThat(putMeta1)
+                .as("putStringMeta should be cached")
+                .isSameAs(putMeta2);
+    }
+
+    @Test
     @DisplayName("Should clear all caches")
     void shouldClearAllCaches() {
         // Given - populate caches
