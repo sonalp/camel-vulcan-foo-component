@@ -343,6 +343,14 @@ public class ProtoJsonDataFormat extends ServiceSupport
 
         engine = new ProtoJsonEngine(engineConfig);
 
+        // WARMUP: Pre-register root message class if known
+        // This ensures zero-DynamicMessage parsing by caching all message types and nested types
+        if (instanceClass != null) {
+            engineConfig.getMetaRegistry().register(instanceClass);
+            LOG.info("ProtoJsonDataFormat warmup: Registered {} and all nested types in MetaRegistry",
+                    instanceClass.getSimpleName());
+        }
+
         LOG.info("ProtoJsonDataFormat started with {} in-field converters, {} map converters, {} out-field converters",
                 allInFieldConverters.size(), allInMapConverters.size(), allOutFieldConverters.size());
     }

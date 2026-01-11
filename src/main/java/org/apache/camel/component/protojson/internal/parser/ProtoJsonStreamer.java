@@ -202,64 +202,38 @@ public final class ProtoJsonStreamer {
         Descriptors.FieldDescriptor valFd = entryDesc.findFieldByName("value");
         ParserConfig cfg = ctx.getParserConfig();
 
+        // Get entry builder from registry (uses generated class if registered)
+        MessageMeta entryMeta = ctx.getMetaRegistry().metaFor(entryDesc);
+
         // Custom converter check
         JsonInMapConverter mapConverter = cfg.getMapConverterRegistry().findConverter(fd);
 
         if (mapConverter == null) {
-            // FAST PATH: Try to get mutable map from generated builder
-            Map<Object, Object> mutableMap = GeneratedMessageHelper.getMutableMap(builder, fd);
-
-            if (mutableMap != null) {
-                // Native Map accessor - FAST!
-                while ((t = p.nextToken()) != JsonToken.END_OBJECT) {
-                    if (t != JsonToken.FIELD_NAME) {
-                        p.skipChildren();
-                        continue;
-                    }
-
-                    String jsonKey = p.getCurrentName();
-                    JsonToken valToken = p.nextToken();
-
-                    if (valToken == JsonToken.VALUE_NULL && cfg.isAllowNullForScalars()) {
-                        continue;
-                    }
-
-                    Object key = convertMapKey(jsonKey, keyFd);
-                    Object value = parseValue(p, valToken, valFd, ctx);
-
-                    // Direct put() - native performance!
-                    mutableMap.put(key, value);
+            // Standard path: Create map entries using builders from registry
+            while ((t = p.nextToken()) != JsonToken.END_OBJECT) {
+                if (t != JsonToken.FIELD_NAME) {
+                    p.skipChildren();
+                    continue;
                 }
-            } else {
-                // FALLBACK: Use entry builder (DynamicMessage or generated)
-                MessageMeta entryMeta = ctx.getMetaRegistry().metaFor(entryDesc);
 
-                while ((t = p.nextToken()) != JsonToken.END_OBJECT) {
-                    if (t != JsonToken.FIELD_NAME) {
-                        p.skipChildren();
-                        continue;
-                    }
+                String jsonKey = p.getCurrentName();
+                JsonToken valToken = p.nextToken();
 
-                    String jsonKey = p.getCurrentName();
-                    JsonToken valToken = p.nextToken();
-
-                    if (valToken == JsonToken.VALUE_NULL && cfg.isAllowNullForScalars()) {
-                        continue;
-                    }
-
-                    Object key = convertMapKey(jsonKey, keyFd);
-                    Object value = parseValue(p, valToken, valFd, ctx);
-
-                    // Create entry using builder
-                    Message.Builder entryBuilder = entryMeta.newBuilder();
-                    entryBuilder.setField(keyFd, key);
-                    entryBuilder.setField(valFd, value);
-                    builder.addRepeatedField(fd, entryBuilder.build());
+                if (valToken == JsonToken.VALUE_NULL && cfg.isAllowNullForScalars()) {
+                    continue;
                 }
+
+                Object key = convertMapKey(jsonKey, keyFd);
+                Object value = parseValue(p, valToken, valFd, ctx);
+
+                // Create entry using builder from MetaRegistry
+                Message.Builder entryBuilder = entryMeta.newBuilder();
+                entryBuilder.setField(keyFd, key);
+                entryBuilder.setField(valFd, value);
+                builder.addRepeatedField(fd, entryBuilder.build());
             }
         } else {
             // Custom converter path
-            MessageMeta entryMeta = ctx.getMetaRegistry().metaFor(entryDesc);
             Message.Builder entryBuilder = entryMeta.newBuilder();
 
             while ((t = p.nextToken()) != JsonToken.END_OBJECT) {
