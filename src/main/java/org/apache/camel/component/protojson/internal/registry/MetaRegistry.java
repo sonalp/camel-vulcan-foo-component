@@ -94,6 +94,9 @@ public final class MetaRegistry {
                 }
             }
         }
+
+        // Resolve nested MessageMeta references now that all types are registered
+        meta.resolveNestedMeta(this);
     }
 
     private Message getNestedDefault(Message parent, Descriptors.FieldDescriptor fd) {
@@ -128,7 +131,7 @@ public final class MetaRegistry {
             List<Descriptors.FieldDescriptor> fds = desc.getFields();
 
             for (Descriptors.FieldDescriptor fd : fds) {
-                FieldMeta meta = new FieldMeta(fd, this);
+                FieldMeta meta = new FieldMeta(fd);
                 String jsonName = fd.getJsonName();
                 String protoName = fd.getName();
 
@@ -138,6 +141,18 @@ public final class MetaRegistry {
                 // Lowercase (case-insensitive)
                 byName.putIfAbsent(jsonName.toLowerCase(Locale.ROOT), meta);
                 byName.putIfAbsent(protoName.toLowerCase(Locale.ROOT), meta);
+            }
+        }
+
+        /**
+         * Resolve nested MessageMeta references for MESSAGE fields.
+         * Must be called after the type and its nested types are registered.
+         */
+        public void resolveNestedMeta(MetaRegistry registry) {
+            for (FieldMeta fm : byName.values()) {
+                if (fm.nestedMeta == null && fm.fd.getJavaType() == Descriptors.FieldDescriptor.JavaType.MESSAGE) {
+                    fm.nestedMeta = registry.metaFor(fm.fd.getMessageType());
+                }
             }
         }
 
@@ -171,29 +186,11 @@ public final class MetaRegistry {
      */
     public static final class FieldMeta {
         public final Descriptors.FieldDescriptor fd;
-        public final MessageMeta nestedMeta; // Non-null for MESSAGE fields
+        public MessageMeta nestedMeta; // Non-null for MESSAGE fields (populated after registration)
 
-        public FieldMeta(Descriptors.FieldDescriptor fd, MessageMeta parentMeta) {
+        public FieldMeta(Descriptors.FieldDescriptor fd) {
             this.fd = fd;
-
-            // Set nestedMeta for MESSAGE fields
-            if (fd.getJavaType() == Descriptors.FieldDescriptor.JavaType.MESSAGE) {
-                if (fd.isMapField()) {
-                    // Map value might be MESSAGE
-                    Descriptors.FieldDescriptor valFd = fd.getMessageType().findFieldByName("value");
-                    if (valFd.getJavaType() == Descriptors.FieldDescriptor.JavaType.MESSAGE) {
-                        this.nestedMeta = parentMeta; // Will be resolved lazily
-                    } else {
-                        this.nestedMeta = null;
-                    }
-                } else {
-                    // Regular MESSAGE field - get from registry
-                    // Note: This will be populated when accessed, not during construction
-                    this.nestedMeta = null; // Will be resolved lazily via registry
-                }
-            } else {
-                this.nestedMeta = null;
-            }
+            this.nestedMeta = null; // Will be resolved after all types are registered
         }
     }
 }

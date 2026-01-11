@@ -14,8 +14,6 @@ import org.apache.camel.component.protojson.internal.registry.MetaRegistry.Messa
 import org.apache.camel.component.protojson.internal.registry.MetaRegistry.FieldMeta;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Core streaming JSON parser for converting JSON to Protobuf messages.
@@ -26,24 +24,6 @@ import java.util.Map;
  * and may change without notice.
  */
 public final class ProtoJsonStreamer {
-
-    /**
-     * Cache for common integer map keys (0-9999).
-     */
-    private static final Map<String, Integer> INT_KEY_CACHE;
-    private static final Map<String, Long> LONG_KEY_CACHE;
-
-    static {
-        INT_KEY_CACHE = new HashMap<>(10000);
-        LONG_KEY_CACHE = new HashMap<>(1000);
-
-        for (int i = 0; i < 10000; i++) {
-            INT_KEY_CACHE.put(String.valueOf(i), i);
-        }
-        for (long i = 0; i < 1000; i++) {
-            LONG_KEY_CACHE.put(String.valueOf(i), i);
-        }
-    }
 
     private ProtoJsonStreamer() {}
 
@@ -130,7 +110,7 @@ public final class ProtoJsonStreamer {
         }
 
         // 2. Parse and set value
-        Object value = parseValue(p, t, fd, ctx);
+        Object value = parseValue(p, t, fm, ctx);
         builder.setField(fd, value);
     }
 
@@ -175,7 +155,7 @@ public final class ProtoJsonStreamer {
         }
 
         // 2. Parse and add value
-        Object value = parseValue(p, t, fd, ctx);
+        Object value = parseValue(p, t, fm, ctx);
         builder.addRepeatedField(fd, value);
     }
 
@@ -202,8 +182,9 @@ public final class ProtoJsonStreamer {
         Descriptors.FieldDescriptor valFd = entryDesc.findFieldByName("value");
         ParserConfig cfg = ctx.getParserConfig();
 
-        // Get entry builder from registry (uses generated class if registered)
-        MessageMeta entryMeta = ctx.getMetaRegistry().metaFor(entryDesc);
+        // Get entry metadata from FieldMeta (cached, no lookup!)
+        MessageMeta entryMeta = fm.nestedMeta;
+        FieldMeta valueFm = entryMeta.find("value");
 
         // Custom converter check
         JsonInMapConverter mapConverter = cfg.getMapConverterRegistry().findConverter(fd);
@@ -224,7 +205,7 @@ public final class ProtoJsonStreamer {
                 }
 
                 Object key = convertMapKey(jsonKey, keyFd);
-                Object value = parseValue(p, valToken, valFd, ctx);
+                Object value = parseValue(p, valToken, valueFm, ctx);
 
                 // Create entry using builder from MetaRegistry
                 Message.Builder entryBuilder = entryMeta.newBuilder();
@@ -272,8 +253,10 @@ public final class ProtoJsonStreamer {
 
     private static Object parseValue(JsonParser p,
             JsonToken t,
-            Descriptors.FieldDescriptor fd,
+            FieldMeta fm,
             JsonToProtoContext ctx) throws IOException, ProtoJsonException {
+
+        Descriptors.FieldDescriptor fd = fm.fd;
 
         return switch (fd.getJavaType()) {
             case STRING -> {
@@ -321,8 +304,8 @@ public final class ProtoJsonStreamer {
             }
             case ENUM -> parseEnumValue(p, t, fd, ctx.getParserConfig());
             case MESSAGE -> {
-                // Use generated builder from registry
-                MessageMeta nestedMeta = ctx.getMetaRegistry().metaFor(fd.getMessageType());
+                // Use cached MessageMeta from FieldMeta (no registry lookup!)
+                MessageMeta nestedMeta = fm.nestedMeta;
                 Message.Builder nestedBuilder = nestedMeta.newBuilder();
                 Descriptors.Descriptor nestedDesc = fd.getMessageType();
                 MessageTypeConverter conv = ctx.getRegistry().get(nestedDesc);
@@ -367,8 +350,6 @@ public final class ProtoJsonStreamer {
         return switch (keyFd.getJavaType()) {
             case STRING -> jsonKey;
             case INT -> {
-                Integer cached = INT_KEY_CACHE.get(jsonKey);
-                if (cached != null) yield cached;
                 try {
                     yield Integer.parseInt(jsonKey);
                 } catch (NumberFormatException e) {
@@ -380,8 +361,6 @@ public final class ProtoJsonStreamer {
                 }
             }
             case LONG -> {
-                Long cached = LONG_KEY_CACHE.get(jsonKey);
-                if (cached != null) yield cached;
                 try {
                     yield Long.parseLong(jsonKey);
                 } catch (NumberFormatException e) {
