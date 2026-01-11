@@ -3,7 +3,6 @@ package org.apache.camel.component.protojson.internal.parser;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.google.protobuf.Descriptors;
-import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.Message;
 
 import org.apache.camel.component.protojson.config.ParserConfig;
@@ -11,8 +10,8 @@ import org.apache.camel.component.protojson.converter.JsonInFieldConverter;
 import org.apache.camel.component.protojson.converter.JsonInMapConverter;
 import org.apache.camel.component.protojson.converter.MessageTypeConverter;
 import org.apache.camel.component.protojson.engine.ProtoJsonException;
-import org.apache.camel.component.protojson.internal.registry.FieldConverterRegistry;
 import org.apache.camel.component.protojson.internal.registry.MetaRegistry.MessageMeta;
+import org.apache.camel.component.protojson.internal.registry.MetaRegistry.FieldMeta;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -21,6 +20,8 @@ import java.util.Map;
 /**
  * Core streaming JSON parser for converting JSON to Protobuf messages.
  *
+ * <p>Zero-DynamicMessage implementation - uses only generated class builders.
+ *
  * <p><strong>INTERNAL USE ONLY</strong> - This class is not part of the public API
  * and may change without notice.
  */
@@ -28,13 +29,11 @@ public final class ProtoJsonStreamer {
 
     /**
      * Cache for common integer map keys (0-9999).
-     * Avoids Integer.parseInt() allocation overhead for frequently used keys.
      */
     private static final Map<String, Integer> INT_KEY_CACHE;
     private static final Map<String, Long> LONG_KEY_CACHE;
 
     static {
-        // Pre-populate cache with common integer keys
         INT_KEY_CACHE = new HashMap<>(10000);
         LONG_KEY_CACHE = new HashMap<>(1000);
 
@@ -76,7 +75,7 @@ public final class ProtoJsonStreamer {
             String fieldName = p.getCurrentName();
             JsonToken valueToken = p.nextToken();
 
-            MessageMeta.FieldMeta fm = meta.find(fieldName);
+            FieldMeta fm = meta.find(fieldName);
             if (fm == null) {
                 if (cfg.isIgnoringUnknownFields()) {
                     p.skipChildren();
@@ -92,16 +91,15 @@ public final class ProtoJsonStreamer {
             Descriptors.FieldDescriptor fd = fm.fd;
 
             if (valueToken == JsonToken.VALUE_NULL && cfg.isAllowNullForScalars()) {
-                // skip, field not set
                 continue;
             }
 
             if (fd.isMapField()) {
-                parseMapField(p, valueToken, fd, builder, ctx);
+                parseMapField(p, valueToken, fm, builder, ctx);
             } else if (fd.isRepeated()) {
-                parseRepeatedField(p, valueToken, fd, builder, ctx);
+                parseRepeatedField(p, valueToken, fm, builder, ctx);
             } else {
-                parseSingleField(p, valueToken, fd, builder, ctx);
+                parseSingleField(p, valueToken, fm, builder, ctx);
             }
         }
     }
@@ -110,9 +108,11 @@ public final class ProtoJsonStreamer {
 
     private static void parseSingleField(JsonParser p,
             JsonToken t,
-            Descriptors.FieldDescriptor fd,
+            FieldMeta fm,
             Message.Builder builder,
             JsonToProtoContext ctx) throws IOException, ProtoJsonException {
+
+        Descriptors.FieldDescriptor fd = fm.fd;
 
         // 1. Custom converter
         JsonInFieldConverter converter = ctx.getParserConfig().getInConverterRegistry().findConverter(fd);
@@ -129,15 +129,8 @@ public final class ProtoJsonStreamer {
             }
         }
 
-        // 2. Parse value
-        Object value = parseValue(p, t, fd, builder, ctx);
-
-        // 3. Try MethodHandle (fast path)
-        if (GeneratedMessageHelper.setField(builder, fd, value)) {
-            return;
-        }
-
-        // 4. Fallback (DynamicMessage)
+        // 2. Parse and set value
+        Object value = parseValue(p, t, fd, ctx);
         builder.setField(fd, value);
     }
 
@@ -145,25 +138,26 @@ public final class ProtoJsonStreamer {
 
     private static void parseRepeatedField(JsonParser p,
             JsonToken t,
-            Descriptors.FieldDescriptor fd,
+            FieldMeta fm,
             Message.Builder builder,
             JsonToProtoContext ctx) throws IOException, ProtoJsonException {
 
         if (t == JsonToken.START_ARRAY) {
             while ((t = p.nextToken()) != JsonToken.END_ARRAY) {
-                addRepeatedElement(p, t, fd, builder, ctx);
+                addRepeatedElement(p, t, fm, builder, ctx);
             }
         } else {
-            // Single value -> treat as array
-            addRepeatedElement(p, t, fd, builder, ctx);
+            addRepeatedElement(p, t, fm, builder, ctx);
         }
     }
 
     private static void addRepeatedElement(JsonParser p,
             JsonToken t,
-            Descriptors.FieldDescriptor fd,
+            FieldMeta fm,
             Message.Builder builder,
             JsonToProtoContext ctx) throws IOException, ProtoJsonException {
+
+        Descriptors.FieldDescriptor fd = fm.fd;
 
         // 1. Custom converter
         JsonInFieldConverter converter = ctx.getParserConfig().getInConverterRegistry().findConverter(fd);
@@ -180,15 +174,8 @@ public final class ProtoJsonStreamer {
             }
         }
 
-        // 2. Parse value
-        Object value = parseValue(p, t, fd, builder, ctx);
-
-        // 3. Try MethodHandle (fast path)
-        if (GeneratedMessageHelper.addRepeated(builder, fd, value)) {
-            return;
-        }
-
-        // 4. Fallback (DynamicMessage)
+        // 2. Parse and add value
+        Object value = parseValue(p, t, fd, ctx);
         builder.addRepeatedField(fd, value);
     }
 
@@ -196,9 +183,11 @@ public final class ProtoJsonStreamer {
 
     private static void parseMapField(JsonParser p,
             JsonToken t,
-            Descriptors.FieldDescriptor fd,
+            FieldMeta fm,
             Message.Builder builder,
             JsonToProtoContext ctx) throws IOException, ProtoJsonException {
+
+        Descriptors.FieldDescriptor fd = fm.fd;
 
         if (t != JsonToken.START_OBJECT) {
             throw new ProtoJsonException(
@@ -213,11 +202,14 @@ public final class ProtoJsonStreamer {
         Descriptors.FieldDescriptor valFd = entryDesc.findFieldByName("value");
         ParserConfig cfg = ctx.getParserConfig();
 
-        // Custom converter
+        // Get entry meta for generated builder
+        MessageMeta entryMeta = ctx.getMetaRegistry().metaFor(entryDesc);
+
+        // Custom converter check
         JsonInMapConverter mapConverter = cfg.getMapConverterRegistry().findConverter(fd);
 
-        // Fast path: use putXxx(K, V)
         if (mapConverter == null) {
+            // Standard path - use generated entry builder
             while ((t = p.nextToken()) != JsonToken.END_OBJECT) {
                 if (t != JsonToken.FIELD_NAME) {
                     p.skipChildren();
@@ -232,22 +224,17 @@ public final class ProtoJsonStreamer {
                 }
 
                 Object key = convertMapKey(jsonKey, keyFd);
-                Object value = parseValue(p, valToken, valFd, builder, ctx);
+                Object value = parseValue(p, valToken, valFd, ctx);
 
-                // Try MethodHandle
-                if (GeneratedMessageHelper.putMap(builder, fd, key, value)) {
-                    continue;
-                }
-
-                // Fallback to DynamicMessage entry
-                Message.Builder entryBuilder = DynamicMessage.newBuilder(entryDesc);
+                // Create entry using generated builder
+                Message.Builder entryBuilder = entryMeta.newBuilder();
                 entryBuilder.setField(keyFd, key);
                 entryBuilder.setField(valFd, value);
                 builder.addRepeatedField(fd, entryBuilder.build());
             }
         } else {
             // Custom converter path
-            Message.Builder entryBuilder = DynamicMessage.newBuilder(entryDesc);
+            Message.Builder entryBuilder = entryMeta.newBuilder();
             while ((t = p.nextToken()) != JsonToken.END_OBJECT) {
                 if (t != JsonToken.FIELD_NAME) {
                     p.skipChildren();
@@ -285,7 +272,6 @@ public final class ProtoJsonStreamer {
     private static Object parseValue(JsonParser p,
             JsonToken t,
             Descriptors.FieldDescriptor fd,
-            Message.Builder builder,
             JsonToProtoContext ctx) throws IOException, ProtoJsonException {
 
         return switch (fd.getJavaType()) {
@@ -334,7 +320,9 @@ public final class ProtoJsonStreamer {
             }
             case ENUM -> parseEnumValue(p, t, fd, ctx.getParserConfig());
             case MESSAGE -> {
-                Message.Builder nestedBuilder = builder.newBuilderForField(fd);
+                // Use generated builder from registry
+                MessageMeta nestedMeta = ctx.getMetaRegistry().metaFor(fd.getMessageType());
+                Message.Builder nestedBuilder = nestedMeta.newBuilder();
                 Descriptors.Descriptor nestedDesc = fd.getMessageType();
                 MessageTypeConverter conv = ctx.getRegistry().get(nestedDesc);
                 conv.mergeInto(p, nestedDesc, nestedBuilder, ctx);

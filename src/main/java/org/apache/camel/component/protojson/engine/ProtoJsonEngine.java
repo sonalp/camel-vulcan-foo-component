@@ -32,6 +32,9 @@ public final class ProtoJsonEngine {
     public <T extends Message> T parse(InputStream in, Class<T> type)
             throws IOException, ProtoJsonException {
 
+        // Register message class and nested types for optimized parsing
+        config.getMetaRegistry().register(type);
+
         Message.Builder builder = config.getBuilderFactory().newBuilder(type);
         Descriptors.Descriptor desc = builder.getDescriptorForType();
 
@@ -51,6 +54,9 @@ public final class ProtoJsonEngine {
 
     public <T extends Message> T parse(byte[] data, Class<T> type)
             throws IOException, ProtoJsonException {
+
+        // Register message class and nested types for optimized parsing
+        config.getMetaRegistry().register(type);
 
         Message.Builder builder = config.getBuilderFactory().newBuilder(type);
         Descriptors.Descriptor desc = builder.getDescriptorForType();
