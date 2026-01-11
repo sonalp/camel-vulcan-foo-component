@@ -9,171 +9,116 @@ import org.apache.camel.component.protojson.test.proto.UserWithMetadata;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.lang.invoke.MethodHandle;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for GeneratedMessageHelper - verifies optimization utilities work correctly.
+ * Tests for GeneratedMessageHelper - verifies MethodHandle optimization works correctly.
  */
 @DisplayName("GeneratedMessageHelper Tests")
 class GeneratedMessageHelperTest {
 
     @Test
-    @DisplayName("Should detect generated builder")
-    void shouldDetectGeneratedBuilder() {
+    @DisplayName("Should set single field using MethodHandle")
+    void shouldSetSingleFieldUsingMethodHandle() throws Throwable {
         // Given
-        Message.Builder generatedBuilder = UserWithMetadata.newBuilder();
-        Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
-        Message.Builder dynamicBuilder = DynamicMessage.newBuilder(desc);
-
-        // When & Then
-        assertThat(GeneratedMessageHelper.isGeneratedBuilder(generatedBuilder))
-                .as("Generated class builder should be detected")
-                .isTrue();
-
-        assertThat(GeneratedMessageHelper.isGeneratedBuilder(dynamicBuilder))
-                .as("DynamicMessage builder should not be detected as generated")
-                .isFalse();
-
-        assertThat(GeneratedMessageHelper.isGeneratedBuilder(null))
-                .as("Null builder should return false")
-                .isFalse();
-    }
-
-    @Test
-    @DisplayName("Should convert proto field name to camelCase")
-    void shouldConvertToCamelCase() {
-        // When & Then
-        assertThat(GeneratedMessageHelper.toCamelCase("string_meta"))
-                .isEqualTo("StringMeta");
-
-        assertThat(GeneratedMessageHelper.toCamelCase("int_key_meta"))
-                .isEqualTo("IntKeyMeta");
-
-        assertThat(GeneratedMessageHelper.toCamelCase("addressMap"))
-                .isEqualTo("AddressMap");
-
-        assertThat(GeneratedMessageHelper.toCamelCase("name"))
-                .isEqualTo("Name");
-
-        assertThat(GeneratedMessageHelper.toCamelCase(""))
-                .isEmpty();
-
-        assertThat(GeneratedMessageHelper.toCamelCase(null))
-                .isNull();
-    }
-
-    @Test
-    @DisplayName("Should get Java class for field descriptor")
-    void shouldGetJavaClass() throws Exception {
-        // Given
+        UserWithMetadata.Builder builder = UserWithMetadata.newBuilder();
         Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
         Descriptors.FieldDescriptor nameField = desc.findFieldByName("name");
-        Descriptors.FieldDescriptor intMetaField = desc.findFieldByName("int_meta");
 
-        Descriptors.FieldDescriptor keyField = intMetaField.getMessageType().findFieldByName("key");
-        Descriptors.FieldDescriptor valueField = intMetaField.getMessageType().findFieldByName("value");
+        // When - use MethodHandle optimization
+        boolean success = GeneratedMessageHelper.setField(builder, nameField, "John Doe");
 
-        // When & Then
-        assertThat(GeneratedMessageHelper.getJavaClass(nameField))
-                .isEqualTo(String.class);
+        // Then
+        assertThat(success)
+                .as("MethodHandle should successfully set field")
+                .isTrue();
 
-        assertThat(GeneratedMessageHelper.getJavaClass(keyField))
-                .isEqualTo(String.class);
-
-        assertThat(GeneratedMessageHelper.getJavaClass(valueField))
-                .isEqualTo(Integer.class);
+        UserWithMetadata user = builder.build();
+        assertThat(user.getName()).isEqualTo("John Doe");
     }
 
     @Test
-    @DisplayName("Should find map put method for generated class")
-    void shouldFindMapPutMethod() throws Throwable {
+    @DisplayName("Should add repeated field using MethodHandle")
+    void shouldAddRepeatedFieldUsingMethodHandle() {
+        // Given - note: UserWithMetadata might not have repeated fields
+        // This test demonstrates the API, even if it returns false
+        UserWithMetadata.Builder builder = UserWithMetadata.newBuilder();
+        Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
+        Descriptors.FieldDescriptor nameField = desc.findFieldByName("name");
+
+        // When - try to add (will fail for non-repeated field)
+        boolean success = GeneratedMessageHelper.addRepeated(builder, nameField, "value");
+
+        // Then - should return false for single field (no addName method)
+        assertThat(success)
+                .as("Should return false for non-repeated field")
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("Should put map entry using MethodHandle")
+    void shouldPutMapEntryUsingMethodHandle() {
         // Given
         UserWithMetadata.Builder builder = UserWithMetadata.newBuilder();
         Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
         Descriptors.FieldDescriptor stringMetaField = desc.findFieldByName("string_meta");
 
-        // When
-        MethodHandle putMethod = GeneratedMessageHelper.getMapPutMethod(
-                builder,
-                stringMetaField,
-                String.class,
-                String.class
-        );
+        // When - use MethodHandle optimization
+        boolean success = GeneratedMessageHelper.putMap(builder, stringMetaField, "key1", "value1");
 
         // Then
-        assertThat(putMethod)
-                .as("putStringMeta method should be found")
-                .isNotNull();
+        assertThat(success)
+                .as("MethodHandle should successfully put map entry")
+                .isTrue();
 
-        // Verify the method actually works
-        putMethod.invoke(builder, "testKey", "testValue");
         UserWithMetadata user = builder.build();
-
         assertThat(user.getStringMetaMap())
-                .containsEntry("testKey", "testValue");
+                .containsEntry("key1", "value1");
     }
 
     @Test
-    @DisplayName("Should find map put method for int key map")
-    void shouldFindMapPutMethodForIntKey() throws Throwable {
+    @DisplayName("Should put int key map using MethodHandle")
+    void shouldPutIntKeyMapUsingMethodHandle() {
         // Given
         UserWithMetadata.Builder builder = UserWithMetadata.newBuilder();
         Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
         Descriptors.FieldDescriptor intKeyMetaField = desc.findFieldByName("int_key_meta");
 
-        // When
-        MethodHandle putMethod = GeneratedMessageHelper.getMapPutMethod(
-                builder,
-                intKeyMetaField,
-                Integer.class,
-                String.class
-        );
+        // When - use MethodHandle optimization
+        boolean success = GeneratedMessageHelper.putMap(builder, intKeyMetaField, 42, "answer");
 
         // Then
-        assertThat(putMethod)
-                .as("putIntKeyMeta method should be found")
-                .isNotNull();
+        assertThat(success)
+                .as("MethodHandle should successfully put int key map entry")
+                .isTrue();
 
-        // Verify the method actually works
-        putMethod.invoke(builder, 42, "answer");
         UserWithMetadata user = builder.build();
-
         assertThat(user.getIntKeyMetaMap())
                 .containsEntry(42, "answer");
     }
 
     @Test
-    @DisplayName("Should find map put method for message value map")
-    void shouldFindMapPutMethodForMessageValue() throws Throwable {
+    @DisplayName("Should put message value map using MethodHandle")
+    void shouldPutMessageValueMapUsingMethodHandle() {
         // Given
         UserWithMetadata.Builder builder = UserWithMetadata.newBuilder();
         Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
         Descriptors.FieldDescriptor addressMapField = desc.findFieldByName("address_map");
 
-        // When
-        MethodHandle putMethod = GeneratedMessageHelper.getMapPutMethod(
-                builder,
-                addressMapField,
-                String.class,
-                Message.class
-        );
-
-        // Then
-        assertThat(putMethod)
-                .as("putAddressMap method should be found")
-                .isNotNull();
-
-        // Verify the method actually works
         Address address = Address.newBuilder()
                 .setCity("Boston")
                 .setStreet("Main St")
                 .build();
 
-        putMethod.invoke(builder, "home", address);
-        UserWithMetadata user = builder.build();
+        // When - use MethodHandle optimization
+        boolean success = GeneratedMessageHelper.putMap(builder, addressMapField, "home", address);
 
+        // Then
+        assertThat(success)
+                .as("MethodHandle should successfully put message value map entry")
+                .isTrue();
+
+        UserWithMetadata user = builder.build();
         assertThat(user.getAddressMapMap())
                 .containsKey("home");
         assertThat(user.getAddressMapMap().get("home").getCity())
@@ -181,173 +126,84 @@ class GeneratedMessageHelperTest {
     }
 
     @Test
-    @DisplayName("Should return null for non-existent method")
-    void shouldReturnNullForNonExistentMethod() {
+    @DisplayName("Should return false for DynamicMessage builder")
+    void shouldReturnFalseForDynamicMessageBuilder() {
         // Given
-        UserWithMetadata.Builder builder = UserWithMetadata.newBuilder();
         Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
-        Descriptors.FieldDescriptor stringMetaField = desc.findFieldByName("string_meta");
+        Message.Builder dynamicBuilder = DynamicMessage.newBuilder(desc);
+        Descriptors.FieldDescriptor nameField = desc.findFieldByName("name");
 
-        // When - wrong parameter types
-        MethodHandle putMethod = GeneratedMessageHelper.getMapPutMethod(
-                builder,
-                stringMetaField,
-                Integer.class, // Wrong! Should be String
-                String.class
-        );
+        // When - DynamicMessage has no generated methods
+        boolean success = GeneratedMessageHelper.setField(dynamicBuilder, nameField, "test");
 
         // Then
-        assertThat(putMethod)
-                .as("Should return null for non-matching method signature")
-                .isNull();
+        assertThat(success)
+                .as("DynamicMessage should return false (no MethodHandle)")
+                .isFalse();
     }
 
     @Test
-    @DisplayName("Should return null for DynamicMessage builder")
-    void shouldReturnNullForDynamicMessageBuilder() {
+    @DisplayName("Should use fallback for DynamicMessage map")
+    void shouldUseFallbackForDynamicMessageMap() {
         // Given
         Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
         Message.Builder dynamicBuilder = DynamicMessage.newBuilder(desc);
         Descriptors.FieldDescriptor stringMetaField = desc.findFieldByName("string_meta");
 
-        // When
-        MethodHandle putMethod = GeneratedMessageHelper.getMapPutMethod(
-                dynamicBuilder,
-                stringMetaField,
-                String.class,
-                String.class
-        );
+        // When - DynamicMessage has no putXxx methods
+        boolean success = GeneratedMessageHelper.putMap(dynamicBuilder, stringMetaField, "key", "value");
 
         // Then
-        assertThat(putMethod)
-                .as("DynamicMessage has no generated put methods")
-                .isNull();
-    }
-
-    @Test
-    @DisplayName("Should cache method handles")
-    void shouldCacheMethodHandles() {
-        // Given
-        UserWithMetadata.Builder builder1 = UserWithMetadata.newBuilder();
-        UserWithMetadata.Builder builder2 = UserWithMetadata.newBuilder();
-        Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
-        Descriptors.FieldDescriptor stringMetaField = desc.findFieldByName("string_meta");
-
-        // When
-        MethodHandle putMethod1 = GeneratedMessageHelper.getMapPutMethod(
-                builder1, stringMetaField, String.class, String.class);
-        MethodHandle putMethod2 = GeneratedMessageHelper.getMapPutMethod(
-                builder2, stringMetaField, String.class, String.class);
-
-        // Then
-        assertThat(putMethod1)
-                .as("Both calls should return the same cached MethodHandle")
-                .isSameAs(putMethod2);
-    }
-
-    @Test
-    @DisplayName("Should get single field setter")
-    void shouldGetSingleFieldSetter() throws Throwable {
-        // Given
-        UserWithMetadata.Builder builder = UserWithMetadata.newBuilder();
-        Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
-        Descriptors.FieldDescriptor nameField = desc.findFieldByName("name");
-
-        // When
-        MethodHandle setMethod = GeneratedMessageHelper.getSingleFieldSetter(
-                builder,
-                nameField,
-                String.class
-        );
-
-        // Then
-        assertThat(setMethod)
-                .as("setName method should be found")
-                .isNotNull();
-
-        // Verify the method works
-        setMethod.invoke(builder, "John Doe");
-        UserWithMetadata user = builder.build();
-
-        assertThat(user.getName()).isEqualTo("John Doe");
-    }
-
-    @Test
-    @DisplayName("Should get repeated field adder")
-    void shouldGetRepeatedFieldAdder() throws Throwable {
-        // Given - find a repeated field (tags from User message if exists, or use any repeated)
-        // For now, let's use a simple example with a hypothetical repeated field
-        // This test demonstrates the concept even if the exact field doesn't exist
-        UserWithMetadata.Builder builder = UserWithMetadata.newBuilder();
-        Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
-
-        // Find the name field to demonstrate the concept
-        Descriptors.FieldDescriptor nameField = desc.findFieldByName("name");
-
-        // When - try to get repeated adder (will return null for non-repeated field)
-        MethodHandle addMethod = GeneratedMessageHelper.getRepeatedFieldAdder(
-                builder,
-                nameField,
-                String.class
-        );
-
-        // Then - for single field, should return null (no addName method exists)
-        assertThat(addMethod)
-                .as("Single field should not have addXxx method")
-                .isNull();
-    }
-
-    @Test
-    @DisplayName("Should cache method handles for different field types")
-    void shouldCacheMethodHandlesForDifferentTypes() {
-        // Given
-        UserWithMetadata.Builder builder1 = UserWithMetadata.newBuilder();
-        UserWithMetadata.Builder builder2 = UserWithMetadata.newBuilder();
-        Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
-
-        Descriptors.FieldDescriptor nameField = desc.findFieldByName("name");
-        Descriptors.FieldDescriptor stringMetaField = desc.findFieldByName("string_meta");
-
-        // When - get different types of methods
-        MethodHandle setName1 = GeneratedMessageHelper.getSingleFieldSetter(
-                builder1, nameField, String.class);
-        MethodHandle setName2 = GeneratedMessageHelper.getSingleFieldSetter(
-                builder2, nameField, String.class);
-        MethodHandle putMeta1 = GeneratedMessageHelper.getMapPutMethod(
-                builder1, stringMetaField, String.class, String.class);
-        MethodHandle putMeta2 = GeneratedMessageHelper.getMapPutMethod(
-                builder2, stringMetaField, String.class, String.class);
-
-        // Then - same methods should be cached
-        assertThat(setName1)
-                .as("setName should be cached")
-                .isSameAs(setName2);
-        assertThat(putMeta1)
-                .as("putStringMeta should be cached")
-                .isSameAs(putMeta2);
+        assertThat(success)
+                .as("DynamicMessage map should return false (no MethodHandle)")
+                .isFalse();
     }
 
     @Test
     @DisplayName("Should clear all caches")
     void shouldClearAllCaches() {
-        // Given - populate caches
+        // Given - populate caches by using methods
         UserWithMetadata.Builder builder = UserWithMetadata.newBuilder();
         Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
+        Descriptors.FieldDescriptor nameField = desc.findFieldByName("name");
         Descriptors.FieldDescriptor stringMetaField = desc.findFieldByName("string_meta");
 
-        GeneratedMessageHelper.getMapPutMethod(builder, stringMetaField, String.class, String.class);
-        GeneratedMessageHelper.isGeneratedBuilder(builder);
+        GeneratedMessageHelper.setField(builder, nameField, "test");
+        GeneratedMessageHelper.putMap(builder, stringMetaField, "key", "value");
 
         // When
         GeneratedMessageHelper.clearCaches();
 
-        // Then - caches should be cleared (this is mainly for testing)
-        // We can't directly verify cache is empty, but we can verify it still works after clear
-        MethodHandle putMethod = GeneratedMessageHelper.getMapPutMethod(
-                builder, stringMetaField, String.class, String.class);
+        // Then - should still work after clear (repopulates cache)
+        boolean success = GeneratedMessageHelper.setField(builder, nameField, "test2");
+        assertThat(success)
+                .as("Should still work after cache clear")
+                .isTrue();
+    }
 
-        assertThat(putMethod)
-                .as("Should still work after cache clear (repopulates cache)")
-                .isNotNull();
+    @Test
+    @DisplayName("Should handle multiple calls efficiently (caching)")
+    void shouldHandleMultipleCallsEfficiently() {
+        // Given
+        UserWithMetadata.Builder builder = UserWithMetadata.newBuilder();
+        Descriptors.Descriptor desc = UserWithMetadata.getDescriptor();
+        Descriptors.FieldDescriptor stringMetaField = desc.findFieldByName("string_meta");
+
+        // When - multiple calls should use cached MethodHandle
+        boolean success1 = GeneratedMessageHelper.putMap(builder, stringMetaField, "key1", "value1");
+        boolean success2 = GeneratedMessageHelper.putMap(builder, stringMetaField, "key2", "value2");
+        boolean success3 = GeneratedMessageHelper.putMap(builder, stringMetaField, "key3", "value3");
+
+        // Then - all should succeed using cached MethodHandle
+        assertThat(success1).isTrue();
+        assertThat(success2).isTrue();
+        assertThat(success3).isTrue();
+
+        UserWithMetadata user = builder.build();
+        assertThat(user.getStringMetaMap())
+                .hasSize(3)
+                .containsEntry("key1", "value1")
+                .containsEntry("key2", "value2")
+                .containsEntry("key3", "value3");
     }
 }
