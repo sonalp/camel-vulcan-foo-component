@@ -69,12 +69,20 @@ public final class MetaRegistry {
         for (Descriptors.FieldDescriptor fd : desc.getFields()) {
             if (fd.getJavaType() == Descriptors.FieldDescriptor.JavaType.MESSAGE) {
                 if (fd.isMapField()) {
-                    // Map value might be MESSAGE
-                    Descriptors.FieldDescriptor valFd = fd.getMessageType().findFieldByName("value");
+                    // CRITICAL: Register the map entry descriptor itself first!
+                    // Map entries are repeated MapEntry messages, and we need their generated builders
+                    Descriptors.Descriptor entryDesc = fd.getMessageType();
+                    Message entryDefault = getNestedDefault(defaultInstance, fd);
+                    if (entryDefault != null) {
+                        registerRecursive(entryDefault);
+                    }
+
+                    // Also register map value if it's a MESSAGE
+                    Descriptors.FieldDescriptor valFd = entryDesc.findFieldByName("value");
                     if (valFd.getJavaType() == Descriptors.FieldDescriptor.JavaType.MESSAGE) {
-                        Message nestedDefault = getNestedDefault(defaultInstance, valFd);
-                        if (nestedDefault != null) {
-                            registerRecursive(nestedDefault);
+                        Message valueDefault = getNestedDefault(defaultInstance, valFd);
+                        if (valueDefault != null) {
+                            registerRecursive(valueDefault);
                         }
                     }
                 } else {

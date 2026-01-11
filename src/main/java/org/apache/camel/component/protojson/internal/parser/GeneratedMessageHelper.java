@@ -67,6 +67,7 @@ final class GeneratedMessageHelper {
                 MethodType type = MethodType.methodType(java.util.Map.class);
                 return lookup.findVirtual(builder.getClass(), methodName, type);
             } catch (Exception e) {
+                // Method doesn't exist or isn't accessible - fallback will be used
                 return null;
             }
         });
