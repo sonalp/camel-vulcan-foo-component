@@ -34,7 +34,7 @@ public class RepeatedFieldBenchmark {
 
     @Setup
     public void setup() {
-        ProtoJsonEngineConfig config = ProtoJsonEngineConfig.builder().build();
+        ProtoJsonEngineConfig config = ProtoJsonEngineConfig.newBuilder().build();
         engine = new ProtoJsonEngine(config);
 
         // Build JSON with repeated fields

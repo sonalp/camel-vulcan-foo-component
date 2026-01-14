@@ -169,11 +169,7 @@ public final class MetaRegistry {
          * Uses generated class builder if available, otherwise generic reflection.
          */
         public Message.Builder newBuilder() {
-            if (defaultInstance != null) {
-                return defaultInstance.toBuilder();
-            }
-            // Fallback for DynamicMessage (shouldn't happen if registered properly)
-            return com.google.protobuf.DynamicMessage.newBuilder(descriptor);
+            return defaultInstance.toBuilder();
         }
 
         public Descriptors.Descriptor getDescriptor() {

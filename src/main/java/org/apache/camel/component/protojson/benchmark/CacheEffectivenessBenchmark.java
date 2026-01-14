@@ -46,7 +46,7 @@ public class CacheEffectivenessBenchmark {
         }
 
         public ProtoJsonEngine createEngine() {
-            return new ProtoJsonEngine(ProtoJsonEngineConfig.builder().build());
+            return new ProtoJsonEngine(ProtoJsonEngineConfig.newBuilder().build());
         }
 
         public byte[] getJson() {
@@ -65,7 +65,7 @@ public class CacheEffectivenessBenchmark {
 
         @Setup
         public void setup() {
-            ProtoJsonEngineConfig config = ProtoJsonEngineConfig.builder().build();
+            ProtoJsonEngineConfig config = ProtoJsonEngineConfig.newBuilder().build();
             engine = new ProtoJsonEngine(config);
 
             json = """
@@ -101,7 +101,7 @@ public class CacheEffectivenessBenchmark {
 
         @Setup
         public void setup() {
-            ProtoJsonEngineConfig config = ProtoJsonEngineConfig.builder().build();
+            ProtoJsonEngineConfig config = ProtoJsonEngineConfig.newBuilder().build();
             engine = new ProtoJsonEngine(config);
 
             jsons = new byte[][] {
@@ -206,7 +206,7 @@ public class CacheEffectivenessBenchmark {
 
         @Setup
         public void setup() {
-            ProtoJsonEngineConfig config = ProtoJsonEngineConfig.builder().build();
+            ProtoJsonEngineConfig config = ProtoJsonEngineConfig.newBuilder().build();
             engine = new ProtoJsonEngine(config);
 
             // Correct JSON field names (should hit first lookup)

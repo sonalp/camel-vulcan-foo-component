@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.Message;
+import org.apache.camel.component.protojson.internal.JacksonConfig;
 import org.apache.camel.component.protojson.internal.parser.JsonToProtoContext;
 import org.apache.camel.component.protojson.converter.MessageJsonConverter;
 import org.apache.camel.component.protojson.internal.parser.ProtoJsonStreamer;
@@ -22,9 +23,22 @@ public final class ProtoJsonEngine {
     private final ProtoJsonEngineConfig config;
     private final JsonFactory jsonFactory;
 
+    private final JsonToProtoContext jsonCtx;
+
     public ProtoJsonEngine(ProtoJsonEngineConfig config) {
         this.config = config;
-        this.jsonFactory = config.getObjectMapper().getFactory();
+
+
+        // Jackson ayarlarını merkezi helper'dan al
+        //this.jsonFactory = JacksonConfig.createJsonFactory(config.getParserConfig());
+        this.jsonFactory = JsonFactory.builder().build();
+
+        // Context'i de ctor'da oluşturup hot-path'ten çıkarıyoruz
+        this.jsonCtx = new JsonToProtoContext(
+                config.getParserConfig(),
+                config.getInRegistry(),
+                config.getMetaRegistry()
+        );
     }
 
     // ==== JSON -> Proto (tip biliniyorsa) ====
@@ -39,12 +53,8 @@ public final class ProtoJsonEngine {
         Descriptors.Descriptor desc = builder.getDescriptorForType();
 
         try (JsonParser parser = jsonFactory.createParser(in)) {
-            JsonToProtoContext ctx = new JsonToProtoContext(
-                    config.getParserConfig(),
-                    config.getInRegistry(),
-                    config.getMetaRegistry()
-            );
-            ProtoJsonStreamer.merge(parser, desc, builder, ctx);
+
+            ProtoJsonStreamer.merge(parser, desc, builder, jsonCtx);
 
             @SuppressWarnings("unchecked")
             T result = (T) builder.build();
@@ -62,12 +72,8 @@ public final class ProtoJsonEngine {
         Descriptors.Descriptor desc = builder.getDescriptorForType();
 
         try (JsonParser parser = jsonFactory.createParser(data)) {
-            JsonToProtoContext ctx = new JsonToProtoContext(
-                    config.getParserConfig(),
-                    config.getInRegistry(),
-                    config.getMetaRegistry()
-            );
-            ProtoJsonStreamer.merge(parser, desc, builder, ctx);
+
+            ProtoJsonStreamer.merge(parser, desc, builder, jsonCtx);
 
             @SuppressWarnings("unchecked")
             T result = (T) builder.build();
@@ -75,41 +81,6 @@ public final class ProtoJsonEngine {
         }
     }
 
-    // ==== JSON -> DynamicMessage (sadece descriptor biliniyorsa) ====
-
-    public DynamicMessage parseDynamic(InputStream in,
-                                       Descriptors.Descriptor desc)
-            throws IOException, ProtoJsonException {
-
-        DynamicMessage.Builder builder = DynamicMessage.newBuilder(desc);
-
-        try (JsonParser parser = jsonFactory.createParser(in)) {
-            JsonToProtoContext ctx = new JsonToProtoContext(
-                    config.getParserConfig(),
-                    config.getInRegistry(),
-                    config.getMetaRegistry()
-            );
-            ProtoJsonStreamer.merge(parser, desc, builder, ctx);
-            return builder.build();
-        }
-    }
-
-    public DynamicMessage parseDynamic(byte[] data,
-                                       Descriptors.Descriptor desc)
-            throws IOException, ProtoJsonException {
-
-        DynamicMessage.Builder builder = DynamicMessage.newBuilder(desc);
-
-        try (JsonParser parser = jsonFactory.createParser(data)) {
-            JsonToProtoContext ctx = new JsonToProtoContext(
-                    config.getParserConfig(),
-                    config.getInRegistry(),
-                    config.getMetaRegistry()
-            );
-            ProtoJsonStreamer.merge(parser, desc, builder, ctx);
-            return builder.build();
-        }
-    }
 
     // ==== Proto -> JSON ====
 

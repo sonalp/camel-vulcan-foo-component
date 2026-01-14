@@ -17,9 +17,9 @@ import java.util.concurrent.TimeUnit;
  */
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.SECONDS)
-@Warmup(iterations = 3, time = 2)
+@Warmup(iterations = 5, time = 5)
 @Measurement(iterations = 5, time = 3)
-@Fork(1)
+@Fork(3)
 @State(Scope.Benchmark)
 public class MapFieldBenchmark {
 
@@ -33,7 +33,7 @@ public class MapFieldBenchmark {
 
     @Setup
     public void setup() {
-        ProtoJsonEngineConfig config = ProtoJsonEngineConfig.builder().build();
+        ProtoJsonEngineConfig config = ProtoJsonEngineConfig.newBuilder().build();
         engine = new ProtoJsonEngine(config);
 
         // Build JSON with map fields
