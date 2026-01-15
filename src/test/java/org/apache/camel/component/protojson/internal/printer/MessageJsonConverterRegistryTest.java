@@ -55,9 +55,8 @@ class MessageJsonConverterRegistryTest {
         MessageJsonConverter customConverter = new DefaultMessageJsonConverter();
         Descriptors.Descriptor descriptor = SimpleUser.getDescriptor();
 
-        MessageJsonConverterRegistry registry = new MessageJsonConverterRegistry(
-                desc -> customConverter
-        );
+        MessageJsonConverterRegistry registry = MessageJsonConverterRegistry.newBuilder(customConverter)
+                .build();
 
         // When
         MessageJsonConverter result = registry.get(descriptor);

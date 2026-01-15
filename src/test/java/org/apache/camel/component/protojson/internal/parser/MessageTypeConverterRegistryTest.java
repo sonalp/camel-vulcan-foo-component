@@ -55,9 +55,8 @@ class MessageTypeConverterRegistryTest {
         MessageTypeConverter customConverter = new DefaultMessageTypeConverter();
         Descriptors.Descriptor descriptor = SimpleUser.getDescriptor();
 
-        MessageTypeConverterRegistry registry = new MessageTypeConverterRegistry(
-                desc -> customConverter
-        );
+        MessageTypeConverterRegistry registry = MessageTypeConverterRegistry.newBuilder(customConverter)
+                .build();
 
         // When
         MessageTypeConverter result = registry.get(descriptor);
