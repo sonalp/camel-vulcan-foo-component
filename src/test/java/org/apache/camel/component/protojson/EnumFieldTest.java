@@ -24,8 +24,9 @@ class EnumFieldTest extends BaseProtoJsonTest {
         return new RouteBuilder() {
             @Override
             public void configure() {
-                // Standard route with default settings
+                // Standard route with default value fields included
                 ProtoJsonDataFormat protoJson = new ProtoJsonDataFormat(UserWithStatus.class);
+                protoJson.setIncludingDefaultValueFields(true);
 
                 from("direct:marshal")
                         .marshal(protoJson)
@@ -34,9 +35,10 @@ class EnumFieldTest extends BaseProtoJsonTest {
                 from("direct:unmarshal")
                         .unmarshal(protoJson);
 
-                // Route with numeric enum output
+                // Route with numeric enum output and default values
                 ProtoJsonDataFormat numericEnumFormat = new ProtoJsonDataFormat(UserWithStatus.class);
                 numericEnumFormat.setPrintingEnumsAsInts(true);
+                numericEnumFormat.setIncludingDefaultValueFields(true);
 
                 from("direct:marshal-numeric")
                         .marshal(numericEnumFormat)
