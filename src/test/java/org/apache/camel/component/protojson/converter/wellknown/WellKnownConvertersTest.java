@@ -1125,6 +1125,186 @@ class WellKnownConvertersTest {
         assertThat(event.hasOptionalCount()).isFalse();
     }
 
+    @Test
+    void testInt32ValueReadAsString() throws Exception {
+        // Given: String token "42" not numeric token 42
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"42\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, int32ValueField);
+        }
+
+        // Then: Should parse string to int (isScalarValue() branch)
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalCount()).isTrue();
+        assertThat(event.getOptionalCount().getValue()).isEqualTo(42);
+    }
+
+    @Test
+    void testInt64ValueReadAsString() throws Exception {
+        // Given: String token
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"9223372036854775807\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, int64ValueField);
+        }
+
+        // Then: Should parse string to long (isScalarValue() branch)
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalLong()).isTrue();
+        assertThat(event.getOptionalLong().getValue()).isEqualTo(9223372036854775807L);
+    }
+
+    @Test
+    void testUInt32ValueReadAsString() throws Exception {
+        // Given: String token
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"100\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, uint32ValueField);
+        }
+
+        // Then: Should parse string to unsigned int (isScalarValue() branch)
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalUint()).isTrue();
+        assertThat(event.getOptionalUint().getValue()).isEqualTo(100);
+    }
+
+    @Test
+    void testUInt64ValueReadAsString() throws Exception {
+        // Given: String token
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"1000\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, uint64ValueField);
+        }
+
+        // Then: Should parse string to unsigned long (isScalarValue() branch)
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalUlong()).isTrue();
+        assertThat(event.getOptionalUlong().getValue()).isEqualTo(1000L);
+    }
+
+    @Test
+    void testFloatValueReadAsString() throws Exception {
+        // Given: String token
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"3.14159\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, floatValueField);
+        }
+
+        // Then: Should parse string to float (isScalarValue() branch)
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalFloat()).isTrue();
+        assertThat(event.getOptionalFloat().getValue()).isCloseTo(3.14159f, within(0.00001f));
+    }
+
+    @Test
+    void testDoubleValueReadAsString() throws Exception {
+        // Given: String token
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"2.718281828459045\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, doubleValueField);
+        }
+
+        // Then: Should parse string to double (isScalarValue() branch)
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalDouble()).isTrue();
+        assertThat(event.getOptionalDouble().getValue()).isCloseTo(2.718281828459045, within(0.000000000000001));
+    }
+
+    @Test
+    void testBoolValueReadAsStringTrue() throws Exception {
+        // Given: String token "true"
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"true\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, boolValueField);
+        }
+
+        // Then: Should parse string to boolean (isScalarValue() branch)
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalBool()).isTrue();
+        assertThat(event.getOptionalBool().getValue()).isTrue();
+    }
+
+    @Test
+    void testBoolValueReadAsStringFalse() throws Exception {
+        // Given: String token "false"
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"false\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, boolValueField);
+        }
+
+        // Then: Should parse string to boolean (isScalarValue() branch)
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalBool()).isTrue();
+        assertThat(event.getOptionalBool().getValue()).isFalse();
+    }
+
+    @Test
+    void testStringValueReadAsScalar() throws Exception {
+        // Given: String token (this tests isScalarValue() branch for StringValue)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"test value\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, stringValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalNote()).isTrue();
+        assertThat(event.getOptionalNote().getValue()).isEqualTo("test value");
+    }
+
     // ==================== WellKnownConverters Factory Tests ====================
 
     @Test
