@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package org.apache.camel.component.protojson.test;
+
+option java_package = "org.apache.camel.component.protojson.test.proto";
+option java_multiple_files = true;
+
+import "example.proto";
+
+// Test message for AnyConverter with all field types
+message AnyTestMessage {
+    string string_field = 1;
+    int32 int_field = 2;
+    int64 long_field = 3;
+    float float_field = 4;
+    double double_field = 5;
+    bool bool_field = 6;
+    UserStatus enum_field = 7;
+    bytes bytes_field = 8;
+    Address message_field = 9;
+    repeated string repeated_field = 10;
+}

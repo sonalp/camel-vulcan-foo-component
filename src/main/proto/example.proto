@@ -102,20 +102,6 @@ message EventMessage {
     google.protobuf.BytesValue optional_bytes = 14;
 }
 
-// Test message for AnyConverter with all field types
-message AnyTestMessage {
-    string string_field = 1;
-    int32 int_field = 2;
-    int64 long_field = 3;
-    float float_field = 4;
-    double double_field = 5;
-    bool bool_field = 6;
-    UserStatus enum_field = 7;
-    bytes bytes_field = 8;
-    Address message_field = 9;
-    repeated string repeated_field = 10;
-}
-
 // Karmaşık nested yapı
 message ComplexMessage {
     string id = 1;

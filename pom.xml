@@ -133,8 +133,15 @@
                 </configuration>
                 <executions>
                     <execution>
+                        <id>compile-protobuf</id>
                         <goals>
                             <goal>compile</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>test-compile-protobuf</id>
+                        <goals>
+                            <goal>test-compile</goal>
                         </goals>
                     </execution>
                 </executions>
