@@ -1243,6 +1243,28 @@ class WellKnownConvertersTest {
     }
 
     @Test
+    void testTimestampReadObject() throws Exception {
+        // Given: Object format {"seconds": ..., "nanos": ...}
+        TimestampConverter converter = new TimestampConverter();
+        String json = "{\"seconds\": 1705315800, \"nanos\": 123456000}";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, timestampField);
+        }
+
+        // Then: Tests START_OBJECT branch
+        EventMessage event = builder.build();
+        assertThat(event.hasCreatedAt()).isTrue();
+        Timestamp timestamp = event.getCreatedAt();
+        assertThat(timestamp.getSeconds()).isEqualTo(1705315800);
+        assertThat(timestamp.getNanos()).isEqualTo(123456000);
+    }
+
+    @Test
     void testStructReadEmpty() throws Exception {
         // Given
         StructConverter converter = new StructConverter();
