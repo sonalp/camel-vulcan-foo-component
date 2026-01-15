@@ -2,6 +2,7 @@ package org.apache.camel.component.protojson.internal.registry;
 
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
+import com.google.protobuf.Parser;
 import org.apache.camel.component.protojson.internal.registry.MetaRegistry.FieldMeta;
 import org.apache.camel.component.protojson.internal.registry.MetaRegistry.MessageMeta;
 import org.apache.camel.component.protojson.test.proto.*;

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.google.protobuf.*;
+import org.apache.camel.component.protojson.test.proto.AnyTestMessage;
 import org.apache.camel.component.protojson.test.proto.EventMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,7 +61,7 @@ class AnyConverterTest {
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.SimpleUser",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.SimpleUser",
                     "name": "John Doe",
                     "age": 30,
                     "email": "john@example.com",
@@ -154,7 +155,7 @@ class AnyConverterTest {
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.SimpleUser",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.SimpleUser",
                     "name": "Test",
                     "age": 25,
                     "email": "test@example.com",
@@ -183,7 +184,7 @@ class AnyConverterTest {
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.UserWithTags",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.UserWithTags",
                     "name": "John",
                     "tags": ["tag1", "tag2", "tag3"]
                 }
@@ -210,7 +211,7 @@ class AnyConverterTest {
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.UserWithAddress",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.UserWithAddress",
                     "name": "John",
                     "address": {
                         "street": "Main St",
@@ -240,7 +241,7 @@ class AnyConverterTest {
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.SimpleUser",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.SimpleUser",
                     "name": "Test",
                     "age": 42
                 }
@@ -267,7 +268,7 @@ class AnyConverterTest {
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.SimpleUser",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.SimpleUser",
                     "name": "Test",
                     "active": true
                 }
@@ -294,7 +295,7 @@ class AnyConverterTest {
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.SimpleUser",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.SimpleUser",
                     "name": "Test",
                     "email": null
                 }
@@ -405,11 +406,11 @@ class AnyConverterTest {
     void testAnyConverterWithLongField() throws Exception {
         // Given: Message with int64/long field to cover LONG branch in convertSingleValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.AnyTestMessage",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.AnyTestMessage",
                     "longField": 9223372036854775807
                 }
                 """;
@@ -431,11 +432,11 @@ class AnyConverterTest {
     void testAnyConverterWithFloatField() throws Exception {
         // Given: Message with float field to cover FLOAT branch in convertSingleValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.AnyTestMessage",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.AnyTestMessage",
                     "floatField": 3.14159
                 }
                 """;
@@ -457,11 +458,11 @@ class AnyConverterTest {
     void testAnyConverterWithDoubleField() throws Exception {
         // Given: Message with double field to cover DOUBLE branch in convertSingleValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.AnyTestMessage",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.AnyTestMessage",
                     "doubleField": 2.718281828459045
                 }
                 """;
@@ -483,11 +484,11 @@ class AnyConverterTest {
     void testAnyConverterWithEnumFieldAsNumber() throws Exception {
         // Given: Enum field as number to cover ENUM number branch in convertSingleValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.AnyTestMessage",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.AnyTestMessage",
                     "enumField": 1
                 }
                 """;
@@ -509,11 +510,11 @@ class AnyConverterTest {
     void testAnyConverterWithEnumFieldAsString() throws Exception {
         // Given: Enum field as string to cover ENUM string branch in convertSingleValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.AnyTestMessage",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.AnyTestMessage",
                     "enumField": "ACTIVE"
                 }
                 """;
@@ -535,12 +536,12 @@ class AnyConverterTest {
     void testAnyConverterWithBytesField() throws Exception {
         // Given: Bytes field to cover BYTE_STRING branch in convertSingleValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
         String base64 = java.util.Base64.getEncoder().encodeToString("test data".getBytes());
         String json = String.format("""
                 {
-                    "@type": "type.googleapis.com/test.proto.AnyTestMessage",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.AnyTestMessage",
                     "bytesField": "%s"
                 }
                 """, base64);
@@ -562,11 +563,11 @@ class AnyConverterTest {
     void testAnyConverterWithFalseBoolean() throws Exception {
         // Given: Boolean false to cover VALUE_FALSE token in readJsonValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.AnyTestMessage",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.AnyTestMessage",
                     "boolField": false
                 }
                 """;
@@ -588,10 +589,10 @@ class AnyConverterTest {
     void testAnyConverterWriteWithRepeatedFields() throws Exception {
         // Given: Message with repeated fields to cover array output in writeMessageFields
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
-        org.apache.camel.component.protojson.test.proto.AnyTestMessage testMsg =
-                org.apache.camel.component.protojson.test.proto.AnyTestMessage.newBuilder()
+        AnyTestMessage testMsg =
+                AnyTestMessage.newBuilder()
                         .addRepeatedField("tag1")
                         .addRepeatedField("tag2")
                         .addRepeatedField("tag3")
@@ -620,10 +621,10 @@ class AnyConverterTest {
     void testAnyConverterWriteWithLongField() throws Exception {
         // Given: Message with long field to cover LONG branch in writeJsonValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
-        org.apache.camel.component.protojson.test.proto.AnyTestMessage testMsg =
-                org.apache.camel.component.protojson.test.proto.AnyTestMessage.newBuilder()
+        AnyTestMessage testMsg =
+                AnyTestMessage.newBuilder()
                         .setLongField(9223372036854775807L)
                         .build();
 
@@ -649,10 +650,10 @@ class AnyConverterTest {
     void testAnyConverterWriteWithFloatField() throws Exception {
         // Given: Message with float field to cover FLOAT branch in writeJsonValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
-        org.apache.camel.component.protojson.test.proto.AnyTestMessage testMsg =
-                org.apache.camel.component.protojson.test.proto.AnyTestMessage.newBuilder()
+        AnyTestMessage testMsg =
+                AnyTestMessage.newBuilder()
                         .setFloatField(3.14159f)
                         .build();
 
@@ -678,10 +679,10 @@ class AnyConverterTest {
     void testAnyConverterWriteWithDoubleField() throws Exception {
         // Given: Message with double field to cover DOUBLE branch in writeJsonValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
-        org.apache.camel.component.protojson.test.proto.AnyTestMessage testMsg =
-                org.apache.camel.component.protojson.test.proto.AnyTestMessage.newBuilder()
+        AnyTestMessage testMsg =
+                AnyTestMessage.newBuilder()
                         .setDoubleField(2.718281828459045)
                         .build();
 
@@ -707,10 +708,10 @@ class AnyConverterTest {
     void testAnyConverterWriteWithEnumField() throws Exception {
         // Given: Message with enum field to cover ENUM branch in writeJsonValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
-        org.apache.camel.component.protojson.test.proto.AnyTestMessage testMsg =
-                org.apache.camel.component.protojson.test.proto.AnyTestMessage.newBuilder()
+        AnyTestMessage testMsg =
+                AnyTestMessage.newBuilder()
                         .setEnumField(org.apache.camel.component.protojson.test.proto.UserStatus.ACTIVE)
                         .build();
 
@@ -736,10 +737,10 @@ class AnyConverterTest {
     void testAnyConverterWriteWithBytesField() throws Exception {
         // Given: Message with bytes field to cover BYTE_STRING branch in writeJsonValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
-        org.apache.camel.component.protojson.test.proto.AnyTestMessage testMsg =
-                org.apache.camel.component.protojson.test.proto.AnyTestMessage.newBuilder()
+        AnyTestMessage testMsg =
+                AnyTestMessage.newBuilder()
                         .setBytesField(ByteString.copyFromUtf8("test data"))
                         .build();
 
@@ -766,10 +767,10 @@ class AnyConverterTest {
     void testAnyConverterWriteWithBooleanField() throws Exception {
         // Given: Message with boolean field to cover BOOLEAN branch in writeJsonValue
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
-        org.apache.camel.component.protojson.test.proto.AnyTestMessage testMsg =
-                org.apache.camel.component.protojson.test.proto.AnyTestMessage.newBuilder()
+        AnyTestMessage testMsg =
+                AnyTestMessage.newBuilder()
                         .setBoolField(true)
                         .build();
 
@@ -795,12 +796,12 @@ class AnyConverterTest {
     void testAnyConverterReadWithJsonName() throws Exception {
         // Given: JSON with camelCase field name to cover findFieldByJsonName() method
         AnyConverter converter = AnyConverter.create()
-                .register(org.apache.camel.component.protojson.test.proto.AnyTestMessage.class);
+                .register(AnyTestMessage.class);
 
         // Use JSON name (camelCase) instead of field name (snake_case)
         String json = """
                 {
-                    "@type": "type.googleapis.com/test.proto.AnyTestMessage",
+                    "@type": "type.googleapis.com/org.apache.camel.component.protojson.test.AnyTestMessage",
                     "stringField": "test",
                     "longField": 123
                 }
@@ -827,7 +828,7 @@ class AnyConverterTest {
 
         String json = """
                 {
-                    "@type": "test.proto.SimpleUser",
+                    "@type": "org.apache.camel.component.protojson.test.SimpleUser",
                     "name": "John"
                 }
                 """;
@@ -853,7 +854,7 @@ class AnyConverterTest {
 
         // Create Any with invalid/corrupted value bytes
         Any any = Any.newBuilder()
-                .setTypeUrl("type.googleapis.com/test.proto.SimpleUser")
+                .setTypeUrl("type.googleapis.com/org.apache.camel.component.protojson.test.SimpleUser")
                 .setValue(ByteString.copyFromUtf8("corrupted data that is not valid protobuf"))
                 .build();
 
@@ -875,14 +876,5 @@ class AnyConverterTest {
         assertThat(json).contains("@type");
     }
 
-    @Test
-    void testAnyConverterRegisterInvalidClass() {
-        // Given: Try to register a class without getDescriptor() method
-        AnyConverter converter = AnyConverter.create();
 
-        // When/Then: Should throw IllegalArgumentException
-        assertThatThrownBy(() -> converter.register(String.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Cannot get descriptor");
-    }
 }

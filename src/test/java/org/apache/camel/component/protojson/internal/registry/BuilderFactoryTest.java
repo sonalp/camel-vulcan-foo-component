@@ -1,6 +1,7 @@
 package org.apache.camel.component.protojson.internal.registry;
 
 import com.google.protobuf.Message;
+import com.google.protobuf.Parser;
 import org.apache.camel.component.protojson.test.proto.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

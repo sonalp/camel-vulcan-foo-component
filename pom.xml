@@ -130,6 +130,9 @@
                     <protocArtifact>
                         com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
                     </protocArtifact>
+                    <protoTestSourceRoot>
+                        ${project.basedir}/src/test/proto
+                    </protoTestSourceRoot>
                 </configuration>
                 <executions>
                     <execution>

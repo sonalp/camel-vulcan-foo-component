@@ -1,7 +1,6 @@
 package org.apache.camel.component.protojson.internal.registry;
 
 import com.google.protobuf.Descriptors;
-import org.apache.camel.component.protojson.converter.JsonInFieldConverter;
 import org.apache.camel.component.protojson.test.proto.SimpleUser;
 import org.apache.camel.component.protojson.test.proto.UserWithAddress;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +14,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 /**
  * Comprehensive unit tests for FieldConverterRegistry.
