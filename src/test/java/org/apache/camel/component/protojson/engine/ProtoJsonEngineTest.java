@@ -601,7 +601,7 @@ class ProtoJsonEngineTest {
     @Test
     void testParseNullInputStream() {
         // When/Then
-        assertThatThrownBy(() -> engine.parse(null, SimpleUser.class))
+        assertThatThrownBy(() -> engine.parse((InputStream) null, SimpleUser.class))
                 .isInstanceOf(Exception.class);
     }
 
