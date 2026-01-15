@@ -20,8 +20,8 @@ class ProtoJsonExceptionTest {
 
         // Then
         assertThat(exception.getMessage()).contains(message);
-        assertThat(exception.getErrorCode()).isEqualTo(code);
-        assertThat(exception.getFieldPath()).isEqualTo("test.field");
+        assertThat(exception.getCode()).isEqualTo(code);
+        assertThat(exception.getPath()).isEqualTo("test.field");
     }
 
     @Test
@@ -63,7 +63,7 @@ class ProtoJsonExceptionTest {
         );
 
         // Then
-        assertThat(exception.getFieldPath()).isEqualTo("user.address.street");
+        assertThat(exception.getPath()).isEqualTo("user.address.street");
     }
 
     @Test
@@ -80,6 +80,6 @@ class ProtoJsonExceptionTest {
 
         // Then
         assertThat(toString).contains("ProtoJsonException");
-        assertThat(toString).contains("INVALID_JSON");
+        assertThat(toString).contains("Invalid JSON syntax");
     }
 }

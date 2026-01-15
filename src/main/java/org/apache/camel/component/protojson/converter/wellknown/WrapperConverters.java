@@ -33,7 +33,7 @@ import java.util.Set;
  */
 public class WrapperConverters implements JsonInFieldConverter, JsonOutFieldConverter {
 
-    private static final Set<String> WRAPPER_TYPES = Set.of(
+    public static final Set<String> WRAPPER_TYPES = Set.of(
             "google.protobuf.StringValue",
             "google.protobuf.BytesValue",
             "google.protobuf.BoolValue",
