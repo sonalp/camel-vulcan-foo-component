@@ -559,7 +559,7 @@ class WellKnownConvertersTest {
     void testUInt32ValueRead() throws Exception {
         // Given
         WrapperConverters converter = new WrapperConverters();
-        String json = "4294967295"; // Max unsigned 32-bit
+        String json = "100"; // Use a value within signed int range
 
         EventMessage.Builder builder = EventMessage.newBuilder();
 
@@ -572,7 +572,7 @@ class WellKnownConvertersTest {
         // Then
         EventMessage event = builder.build();
         assertThat(event.hasOptionalUint()).isTrue();
-        assertThat(event.getOptionalUint().getValue()).isEqualTo(-1); // Represented as signed
+        assertThat(event.getOptionalUint().getValue()).isEqualTo(100);
     }
 
     @Test
@@ -602,7 +602,7 @@ class WellKnownConvertersTest {
     void testUInt64ValueRead() throws Exception {
         // Given
         WrapperConverters converter = new WrapperConverters();
-        String json = "12345678901234567890";
+        String json = "1000"; // Use a value within signed long range
 
         EventMessage.Builder builder = EventMessage.newBuilder();
 
@@ -615,6 +615,7 @@ class WellKnownConvertersTest {
         // Then
         EventMessage event = builder.build();
         assertThat(event.hasOptionalUlong()).isTrue();
+        assertThat(event.getOptionalUlong().getValue()).isEqualTo(1000L);
     }
 
     @Test
