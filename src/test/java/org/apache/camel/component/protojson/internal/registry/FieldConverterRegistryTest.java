@@ -161,8 +161,10 @@ class FieldConverterRegistryTest {
         registry.findConverter(ageField); // Cached
 
         // Then: Each field cached independently
-        assertThat(conv1.checkCount.get()).isEqualTo(1);
-        assertThat(conv2.checkCount.get()).isEqualTo(1);
+        // Note: conv1 is checked twice: once for nameField (matches), once for ageField (no match)
+        // conv2 is checked once for ageField (matches)
+        assertThat(conv1.checkCount.get()).isEqualTo(2); // Checked for both fields
+        assertThat(conv2.checkCount.get()).isEqualTo(1); // Checked only for ageField
     }
 
     @Test
@@ -297,11 +299,16 @@ class FieldConverterRegistryTest {
         assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
         assertThat(exceptions).isEmpty();
 
-        // Verify each converter was checked only once (even with concurrent access)
-        for (CountingConverter conv : converters) {
+        // Verify caching works: first converter checked for all fields, second for all but first, etc.
+        // For N fields with converters in same order: conv[i] is checked (N - i) times during initial cache population
+        int expectedChecksForFirstConverter = converters.size(); // Checked for all field lookups
+        for (int i = 0; i < converters.size(); i++) {
+            CountingConverter conv = converters.get(i);
+            int expectedChecks = converters.size() - i; // Each converter checked fewer times
             assertThat(conv.checkCount.get())
-                    .as("Converter for %s should be checked exactly once", conv.fieldName)
-                    .isEqualTo(1);
+                    .as("Converter for %s should be checked %d times (once per field until match)",
+                        conv.fieldName, expectedChecks)
+                    .isEqualTo(expectedChecks);
         }
 
         executor.shutdown();
