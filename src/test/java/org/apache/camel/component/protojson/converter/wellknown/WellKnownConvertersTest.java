@@ -374,19 +374,29 @@ class WellKnownConvertersTest {
     // ==================== WrapperConverters Tests ====================
 
     @Test
-    void testStringValueConverterSupports() {
+    void testWrapperConvertersSupportsStringValue() {
         // Given
-        WrapperConverters.StringValueConverter converter = new WrapperConverters.StringValueConverter();
+        WrapperConverters converter = new WrapperConverters();
 
         // When/Then
         assertThat(converter.supports(stringValueField)).isTrue();
-        assertThat(converter.supports(int32ValueField)).isFalse();
+        assertThat(converter.supports(timestampField)).isFalse();
+    }
+
+    @Test
+    void testWrapperConvertersSupportsInt32Value() {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+
+        // When/Then
+        assertThat(converter.supports(int32ValueField)).isTrue();
+        assertThat(converter.supports(timestampField)).isFalse();
     }
 
     @Test
     void testStringValueRead() throws Exception {
         // Given
-        WrapperConverters.StringValueConverter converter = new WrapperConverters.StringValueConverter();
+        WrapperConverters converter = new WrapperConverters();
         String json = "\"test value\"";
 
         EventMessage.Builder builder = EventMessage.newBuilder();
@@ -406,7 +416,7 @@ class WellKnownConvertersTest {
     @Test
     void testStringValueReadNull() throws Exception {
         // Given
-        WrapperConverters.StringValueConverter converter = new WrapperConverters.StringValueConverter();
+        WrapperConverters converter = new WrapperConverters();
         String json = "null";
 
         EventMessage.Builder builder = EventMessage.newBuilder();
@@ -425,7 +435,7 @@ class WellKnownConvertersTest {
     @Test
     void testStringValueWrite() throws Exception {
         // Given
-        WrapperConverters.StringValueConverter converter = new WrapperConverters.StringValueConverter();
+        WrapperConverters converter = new WrapperConverters();
         StringValue value = StringValue.of("test value");
 
         EventMessage message = EventMessage.newBuilder()
@@ -446,19 +456,9 @@ class WellKnownConvertersTest {
     }
 
     @Test
-    void testInt32ValueConverterSupports() {
-        // Given
-        WrapperConverters.Int32ValueConverter converter = new WrapperConverters.Int32ValueConverter();
-
-        // When/Then
-        assertThat(converter.supports(int32ValueField)).isTrue();
-        assertThat(converter.supports(stringValueField)).isFalse();
-    }
-
-    @Test
     void testInt32ValueRead() throws Exception {
         // Given
-        WrapperConverters.Int32ValueConverter converter = new WrapperConverters.Int32ValueConverter();
+        WrapperConverters converter = new WrapperConverters();
         String json = "42";
 
         EventMessage.Builder builder = EventMessage.newBuilder();
@@ -478,7 +478,7 @@ class WellKnownConvertersTest {
     @Test
     void testInt32ValueWrite() throws Exception {
         // Given
-        WrapperConverters.Int32ValueConverter converter = new WrapperConverters.Int32ValueConverter();
+        WrapperConverters converter = new WrapperConverters();
         Int32Value value = Int32Value.of(42);
 
         EventMessage message = EventMessage.newBuilder()
@@ -501,29 +501,29 @@ class WellKnownConvertersTest {
     // ==================== WellKnownConverters Factory Tests ====================
 
     @Test
-    void testWellKnownConvertersGetInConverters() {
+    void testWellKnownConvertersAllInConverters() {
         // When
-        var converters = WellKnownConverters.getInConverters();
+        var converters = WellKnownConverters.allInConverters();
 
         // Then
         assertThat(converters).isNotEmpty();
-        assertThat(converters).hasSize(11); // All well-known type converters
+        assertThat(converters).hasSize(4); // Timestamp, Duration, Struct, Wrappers
     }
 
     @Test
-    void testWellKnownConvertersGetOutConverters() {
+    void testWellKnownConvertersAllOutConverters() {
         // When
-        var converters = WellKnownConverters.getOutConverters();
+        var converters = WellKnownConverters.allOutConverters();
 
         // Then
         assertThat(converters).isNotEmpty();
-        assertThat(converters).hasSize(11); // All well-known type converters
+        assertThat(converters).hasSize(4); // Timestamp, Duration, Struct, Wrappers
     }
 
     @Test
     void testWellKnownConvertersContainsTimestamp() {
         // When
-        var converters = WellKnownConverters.getInConverters();
+        var converters = WellKnownConverters.allInConverters();
 
         // Then
         assertThat(converters).anyMatch(c -> c instanceof TimestampConverter);
@@ -532,7 +532,7 @@ class WellKnownConvertersTest {
     @Test
     void testWellKnownConvertersContainsDuration() {
         // When
-        var converters = WellKnownConverters.getInConverters();
+        var converters = WellKnownConverters.allInConverters();
 
         // Then
         assertThat(converters).anyMatch(c -> c instanceof DurationConverter);
@@ -541,7 +541,7 @@ class WellKnownConvertersTest {
     @Test
     void testWellKnownConvertersContainsStruct() {
         // When
-        var converters = WellKnownConverters.getInConverters();
+        var converters = WellKnownConverters.allInConverters();
 
         // Then
         assertThat(converters).anyMatch(c -> c instanceof StructConverter);
@@ -550,11 +550,50 @@ class WellKnownConvertersTest {
     @Test
     void testWellKnownConvertersContainsWrappers() {
         // When
-        var converters = WellKnownConverters.getInConverters();
+        var converters = WellKnownConverters.allInConverters();
+
+        // Then - WrapperConverters is a single class handling all wrapper types
+        assertThat(converters).anyMatch(c -> c instanceof WrapperConverters);
+    }
+
+    @Test
+    void testWellKnownConvertersTimestampFactory() {
+        // When
+        TimestampConverter converter = WellKnownConverters.timestamp();
 
         // Then
-        assertThat(converters).anyMatch(c -> c instanceof WrapperConverters.StringValueConverter);
-        assertThat(converters).anyMatch(c -> c instanceof WrapperConverters.Int32ValueConverter);
+        assertThat(converter).isNotNull();
+        assertThat(converter).isInstanceOf(TimestampConverter.class);
+    }
+
+    @Test
+    void testWellKnownConvertersDurationFactory() {
+        // When
+        DurationConverter converter = WellKnownConverters.duration();
+
+        // Then
+        assertThat(converter).isNotNull();
+        assertThat(converter).isInstanceOf(DurationConverter.class);
+    }
+
+    @Test
+    void testWellKnownConvertersStructFactory() {
+        // When
+        StructConverter converter = WellKnownConverters.struct();
+
+        // Then
+        assertThat(converter).isNotNull();
+        assertThat(converter).isInstanceOf(StructConverter.class);
+    }
+
+    @Test
+    void testWellKnownConvertersWrappersFactory() {
+        // When
+        WrapperConverters converter = WellKnownConverters.wrappers();
+
+        // Then
+        assertThat(converter).isNotNull();
+        assertThat(converter).isInstanceOf(WrapperConverters.class);
     }
 
     // ==================== Edge Cases ====================
