@@ -28,6 +28,13 @@ class WellKnownConvertersTest {
     private Descriptors.FieldDescriptor anyField;
     private Descriptors.FieldDescriptor stringValueField;
     private Descriptors.FieldDescriptor int32ValueField;
+    private Descriptors.FieldDescriptor int64ValueField;
+    private Descriptors.FieldDescriptor uint32ValueField;
+    private Descriptors.FieldDescriptor uint64ValueField;
+    private Descriptors.FieldDescriptor floatValueField;
+    private Descriptors.FieldDescriptor doubleValueField;
+    private Descriptors.FieldDescriptor boolValueField;
+    private Descriptors.FieldDescriptor bytesValueField;
 
     @BeforeEach
     void setUp() {
@@ -40,6 +47,13 @@ class WellKnownConvertersTest {
         anyField = eventDesc.findFieldByName("payload");
         stringValueField = eventDesc.findFieldByName("optional_note");
         int32ValueField = eventDesc.findFieldByName("optional_count");
+        int64ValueField = eventDesc.findFieldByName("optional_long");
+        uint32ValueField = eventDesc.findFieldByName("optional_uint");
+        uint64ValueField = eventDesc.findFieldByName("optional_ulong");
+        floatValueField = eventDesc.findFieldByName("optional_float");
+        doubleValueField = eventDesc.findFieldByName("optional_double");
+        boolValueField = eventDesc.findFieldByName("optional_bool");
+        bytesValueField = eventDesc.findFieldByName("optional_bytes");
     }
 
     // ==================== TimestampConverter Tests ====================
@@ -496,6 +510,347 @@ class WellKnownConvertersTest {
         // Then
         String json = baos.toString(StandardCharsets.UTF_8);
         assertThat(json).isEqualTo("42");
+    }
+
+    @Test
+    void testInt64ValueRead() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        String json = "9223372036854775807"; // Long.MAX_VALUE
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, int64ValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalLong()).isTrue();
+        assertThat(event.getOptionalLong().getValue()).isEqualTo(9223372036854775807L);
+    }
+
+    @Test
+    void testInt64ValueWrite() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        Int64Value value = Int64Value.of(9223372036854775807L);
+
+        EventMessage message = EventMessage.newBuilder()
+                .setOptionalLong(value)
+                .build();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // When
+        try (JsonGenerator gen = jsonFactory.createGenerator(baos)) {
+            converter.write(gen, message, int64ValueField);
+            gen.flush();
+        }
+
+        // Then
+        String json = baos.toString(StandardCharsets.UTF_8);
+        assertThat(json).isEqualTo("9223372036854775807");
+    }
+
+    @Test
+    void testUInt32ValueRead() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        String json = "4294967295"; // Max unsigned 32-bit
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, uint32ValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalUint()).isTrue();
+        assertThat(event.getOptionalUint().getValue()).isEqualTo(-1); // Represented as signed
+    }
+
+    @Test
+    void testUInt32ValueWrite() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        UInt32Value value = UInt32Value.of(100);
+
+        EventMessage message = EventMessage.newBuilder()
+                .setOptionalUint(value)
+                .build();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // When
+        try (JsonGenerator gen = jsonFactory.createGenerator(baos)) {
+            converter.write(gen, message, uint32ValueField);
+            gen.flush();
+        }
+
+        // Then
+        String json = baos.toString(StandardCharsets.UTF_8);
+        assertThat(json).isEqualTo("100");
+    }
+
+    @Test
+    void testUInt64ValueRead() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        String json = "12345678901234567890";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, uint64ValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalUlong()).isTrue();
+    }
+
+    @Test
+    void testUInt64ValueWrite() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        UInt64Value value = UInt64Value.of(1000L);
+
+        EventMessage message = EventMessage.newBuilder()
+                .setOptionalUlong(value)
+                .build();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // When
+        try (JsonGenerator gen = jsonFactory.createGenerator(baos)) {
+            converter.write(gen, message, uint64ValueField);
+            gen.flush();
+        }
+
+        // Then
+        String json = baos.toString(StandardCharsets.UTF_8);
+        assertThat(json).isEqualTo("1000");
+    }
+
+    @Test
+    void testFloatValueRead() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        String json = "3.14159";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, floatValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalFloat()).isTrue();
+        assertThat(event.getOptionalFloat().getValue()).isCloseTo(3.14159f, within(0.00001f));
+    }
+
+    @Test
+    void testFloatValueWrite() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        FloatValue value = FloatValue.of(3.14159f);
+
+        EventMessage message = EventMessage.newBuilder()
+                .setOptionalFloat(value)
+                .build();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // When
+        try (JsonGenerator gen = jsonFactory.createGenerator(baos)) {
+            converter.write(gen, message, floatValueField);
+            gen.flush();
+        }
+
+        // Then
+        String json = baos.toString(StandardCharsets.UTF_8);
+        assertThat(json).contains("3.14159");
+    }
+
+    @Test
+    void testDoubleValueRead() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        String json = "2.718281828459045";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, doubleValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalDouble()).isTrue();
+        assertThat(event.getOptionalDouble().getValue()).isCloseTo(2.718281828459045, within(0.000000000000001));
+    }
+
+    @Test
+    void testDoubleValueWrite() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        DoubleValue value = DoubleValue.of(2.718281828459045);
+
+        EventMessage message = EventMessage.newBuilder()
+                .setOptionalDouble(value)
+                .build();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // When
+        try (JsonGenerator gen = jsonFactory.createGenerator(baos)) {
+            converter.write(gen, message, doubleValueField);
+            gen.flush();
+        }
+
+        // Then
+        String json = baos.toString(StandardCharsets.UTF_8);
+        assertThat(json).contains("2.718281828459045");
+    }
+
+    @Test
+    void testBoolValueReadTrue() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        String json = "true";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, boolValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalBool()).isTrue();
+        assertThat(event.getOptionalBool().getValue()).isTrue();
+    }
+
+    @Test
+    void testBoolValueReadFalse() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        String json = "false";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, boolValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalBool()).isTrue();
+        assertThat(event.getOptionalBool().getValue()).isFalse();
+    }
+
+    @Test
+    void testBoolValueWrite() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        BoolValue value = BoolValue.of(true);
+
+        EventMessage message = EventMessage.newBuilder()
+                .setOptionalBool(value)
+                .build();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // When
+        try (JsonGenerator gen = jsonFactory.createGenerator(baos)) {
+            converter.write(gen, message, boolValueField);
+            gen.flush();
+        }
+
+        // Then
+        String json = baos.toString(StandardCharsets.UTF_8);
+        assertThat(json).isEqualTo("true");
+    }
+
+    @Test
+    void testBytesValueRead() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        String base64 = java.util.Base64.getEncoder().encodeToString("Hello World".getBytes());
+        String json = "\"" + base64 + "\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, bytesValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalBytes()).isTrue();
+        assertThat(event.getOptionalBytes().getValue().toStringUtf8()).isEqualTo("Hello World");
+    }
+
+    @Test
+    void testBytesValueWrite() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        BytesValue value = BytesValue.of(ByteString.copyFromUtf8("Hello World"));
+
+        EventMessage message = EventMessage.newBuilder()
+                .setOptionalBytes(value)
+                .build();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // When
+        try (JsonGenerator gen = jsonFactory.createGenerator(baos)) {
+            converter.write(gen, message, bytesValueField);
+            gen.flush();
+        }
+
+        // Then
+        String json = baos.toString(StandardCharsets.UTF_8);
+        String expectedBase64 = java.util.Base64.getEncoder().encodeToString("Hello World".getBytes());
+        assertThat(json).isEqualTo("\"" + expectedBase64 + "\"");
+    }
+
+    @Test
+    void testInt32ValueReadNull() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        String json = "null";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, int32ValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalCount()).isFalse();
     }
 
     // ==================== WellKnownConverters Factory Tests ====================

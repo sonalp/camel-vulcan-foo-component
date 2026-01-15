@@ -93,6 +93,13 @@ message EventMessage {
     google.protobuf.Any payload = 5;
     google.protobuf.StringValue optional_note = 6;
     google.protobuf.Int32Value optional_count = 7;
+    google.protobuf.Int64Value optional_long = 8;
+    google.protobuf.UInt32Value optional_uint = 9;
+    google.protobuf.UInt64Value optional_ulong = 10;
+    google.protobuf.FloatValue optional_float = 11;
+    google.protobuf.DoubleValue optional_double = 12;
+    google.protobuf.BoolValue optional_bool = 13;
+    google.protobuf.BytesValue optional_bytes = 14;
 }
 
 // Karmaşık nested yapı
