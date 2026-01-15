@@ -249,19 +249,16 @@ class ProtoJsonStreamerEdgeCasesTest {
 
     @Test
     void testNullForScalarWithoutAllow() {
-        // Given: null value for scalar field
+        // Given: null value for scalar field with allowNullForScalars=false
         String json = "{\"name\": null, \"age\": 30}";
 
         ParserConfig config = ParserConfig.newBuilder()
                 .allowNullForScalars(false)
                 .build();
 
-        // When: Parsing
-        // Note: Behavior depends on implementation
-        SimpleUser user = parseJson(json, SimpleUser.class, config);
-
-        // Should still work but might handle differently
-        assertThat(user.getAge()).isEqualTo(30);
+        // When/Then: Should throw exception (protobuf doesn't accept null for string fields)
+        assertThatThrownBy(() -> parseJson(json, SimpleUser.class, config))
+                .isInstanceOf(RuntimeException.class);
     }
 
     @Test
