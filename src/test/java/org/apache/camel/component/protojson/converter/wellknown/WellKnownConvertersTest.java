@@ -727,6 +727,277 @@ class WellKnownConvertersTest {
         assertThat(json).contains("2.718281828459045");
     }
 
+    // ==================== AnyConverter Tests ====================
+
+    @Test
+    void testAnyConverterSupports() {
+        // Given
+        AnyConverter converter = AnyConverter.create();
+
+        // When/Then
+        assertThat(converter.supports(anyField)).isTrue();
+        assertThat(converter.supports(timestampField)).isFalse();
+    }
+
+    @Test
+    void testAnyConverterRegister() {
+        // Given
+        AnyConverter converter = AnyConverter.create();
+
+        // When
+        converter.register(org.apache.camel.component.protojson.test.proto.SimpleUser.class);
+
+        // Then - Should not throw exception
+        assertThat(converter).isNotNull();
+    }
+
+    @Test
+    void testDurationReadObject() throws Exception {
+        // Given
+        DurationConverter converter = new DurationConverter();
+        String json = "{\"seconds\": 300, \"nanos\": 500000000}";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, durationField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        Duration duration = event.getDuration();
+        assertThat(duration.getSeconds()).isEqualTo(300);
+        assertThat(duration.getNanos()).isEqualTo(500000000);
+    }
+
+    @Test
+    void testDurationReadNull() throws Exception {
+        // Given
+        DurationConverter converter = new DurationConverter();
+        String json = "null";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, durationField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasDuration()).isFalse();
+    }
+
+    @Test
+    void testDurationReadEmptyString() throws Exception {
+        // Given
+        DurationConverter converter = new DurationConverter();
+        String json = "\"\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, durationField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasDuration()).isFalse();
+    }
+
+    @Test
+    void testDurationReadOnlySeconds() throws Exception {
+        // Given
+        DurationConverter converter = new DurationConverter();
+        String json = "\"300s\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, durationField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        Duration duration = event.getDuration();
+        assertThat(duration.getSeconds()).isEqualTo(300);
+        assertThat(duration.getNanos()).isZero();
+    }
+
+    @Test
+    void testDurationWriteOnlyNanos() throws Exception {
+        // Given
+        DurationConverter converter = new DurationConverter();
+        Duration duration = Duration.newBuilder()
+                .setSeconds(0)
+                .setNanos(500000000)
+                .build();
+
+        EventMessage message = EventMessage.newBuilder()
+                .setDuration(duration)
+                .build();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // When
+        try (JsonGenerator gen = jsonFactory.createGenerator(baos)) {
+            converter.write(gen, message, durationField);
+            gen.flush();
+        }
+
+        // Then
+        String json = baos.toString(StandardCharsets.UTF_8);
+        assertThat(json).isEqualTo("\"0.5s\"");
+    }
+
+    @Test
+    void testTimestampReadNull() throws Exception {
+        // Given
+        TimestampConverter converter = new TimestampConverter();
+        String json = "null";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, timestampField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasCreatedAt()).isFalse();
+    }
+
+    @Test
+    void testTimestampReadEmptyString() throws Exception {
+        // Given
+        TimestampConverter converter = new TimestampConverter();
+        String json = "\"\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, timestampField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasCreatedAt()).isFalse();
+    }
+
+    @Test
+    void testStructReadEmpty() throws Exception {
+        // Given
+        StructConverter converter = new StructConverter();
+        String json = "{}";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, structField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        Struct struct = event.getMetadata();
+        assertThat(struct.getFieldsMap()).isEmpty();
+    }
+
+    @Test
+    void testStructReadNull() throws Exception {
+        // Given
+        StructConverter converter = new StructConverter();
+        String json = "null";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, structField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasMetadata()).isFalse();
+    }
+
+    @Test
+    void testStructWriteEmpty() throws Exception {
+        // Given
+        StructConverter converter = new StructConverter();
+        Struct struct = Struct.newBuilder().build();
+
+        EventMessage message = EventMessage.newBuilder()
+                .setMetadata(struct)
+                .build();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // When
+        try (JsonGenerator gen = jsonFactory.createGenerator(baos)) {
+            converter.write(gen, message, structField);
+            gen.flush();
+        }
+
+        // Then
+        String json = baos.toString(StandardCharsets.UTF_8);
+        assertThat(json).isEqualTo("{}");
+    }
+
+    @Test
+    void testWrapperConvertersSupportsAllTypes() {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+
+        // When/Then - Test all wrapper types are supported
+        assertThat(converter.supports(stringValueField)).isTrue();
+        assertThat(converter.supports(int32ValueField)).isTrue();
+        assertThat(converter.supports(int64ValueField)).isTrue();
+        assertThat(converter.supports(uint32ValueField)).isTrue();
+        assertThat(converter.supports(uint64ValueField)).isTrue();
+        assertThat(converter.supports(floatValueField)).isTrue();
+        assertThat(converter.supports(doubleValueField)).isTrue();
+        assertThat(converter.supports(boolValueField)).isTrue();
+        assertThat(converter.supports(bytesValueField)).isTrue();
+
+        // Non-wrapper types should not be supported
+        assertThat(converter.supports(timestampField)).isFalse();
+        assertThat(converter.supports(durationField)).isFalse();
+    }
+
+    @Test
+    void testBoolValueReadFalse() throws Exception {
+        // Given
+        WrapperConverters converter = new WrapperConverters();
+        String json = "false";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, boolValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalBool()).isTrue();
+        assertThat(event.getOptionalBool().getValue()).isFalse();
+    }
+
     @Test
     void testBoolValueReadTrue() throws Exception {
         // Given
