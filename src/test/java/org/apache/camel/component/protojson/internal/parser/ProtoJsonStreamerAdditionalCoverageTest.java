@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.google.protobuf.Descriptors;
 import org.apache.camel.component.protojson.config.ParserConfig;
+import java.io.IOException;
 import org.apache.camel.component.protojson.converter.JsonInFieldConverter;
 import org.apache.camel.component.protojson.converter.JsonInMapConverter;
 import org.apache.camel.component.protojson.engine.ProtoJsonException;
@@ -52,19 +53,14 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             // Given: Custom converter that throws exception
             JsonInFieldConverter failingConverter = new JsonInFieldConverter() {
                 @Override
-                public boolean canConvert(String fieldName, Descriptors.FieldDescriptor.Type fieldType) {
+                public boolean supports(Descriptors.FieldDescriptor field) {
                     return true;
                 }
 
                 @Override
-                public Object convert(JsonParser parser, Descriptors.FieldDescriptor.Type fieldType) throws Exception {
-                    throw new RuntimeException("Converter intentionally failed");
-                }
-
-                @Override
                 public void read(JsonParser parser, com.google.protobuf.Message.Builder builder,
-                               Descriptors.FieldDescriptor fd) throws Exception {
-                    throw new RuntimeException("Converter intentionally failed");
+                               Descriptors.FieldDescriptor field) throws IOException {
+                    throw new IOException("Converter intentionally failed");
                 }
             };
 
@@ -81,7 +77,7 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, config))
                     .isInstanceOf(ProtoJsonException.class)
                     .hasMessageContaining("Custom converter failed")
-                    .hasCauseInstanceOf(RuntimeException.class);
+                    .hasCauseInstanceOf(IOException.class);
         }
 
         @Test
@@ -90,19 +86,14 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             // Given: Custom converter for repeated field that throws exception
             JsonInFieldConverter failingConverter = new JsonInFieldConverter() {
                 @Override
-                public boolean canConvert(String fieldName, Descriptors.FieldDescriptor.Type fieldType) {
-                    return fieldType == Descriptors.FieldDescriptor.Type.STRING;
-                }
-
-                @Override
-                public Object convert(JsonParser parser, Descriptors.FieldDescriptor.Type fieldType) throws Exception {
-                    throw new RuntimeException("Repeated converter failed");
+                public boolean supports(Descriptors.FieldDescriptor field) {
+                    return field.isRepeated();
                 }
 
                 @Override
                 public void read(JsonParser parser, com.google.protobuf.Message.Builder builder,
-                               Descriptors.FieldDescriptor fd) throws Exception {
-                    throw new RuntimeException("Repeated converter failed");
+                               Descriptors.FieldDescriptor field) throws IOException {
+                    throw new IOException("Repeated converter failed");
                 }
             };
 
@@ -127,26 +118,16 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             // Given: Custom map converter that throws exception
             JsonInMapConverter failingMapConverter = new JsonInMapConverter() {
                 @Override
-                public boolean canConvert(String fieldName,
-                                        Descriptors.FieldDescriptor.Type keyType,
-                                        Descriptors.FieldDescriptor.Type valueType) {
+                public boolean supports(Descriptors.FieldDescriptor mapField) {
                     return true;
-                }
-
-                @Override
-                public void convert(JsonParser parser,
-                                  Descriptors.FieldDescriptor.Type keyType,
-                                  Descriptors.FieldDescriptor.Type valueType,
-                                  java.util.function.BiConsumer<Object, Object> consumer) throws Exception {
-                    throw new RuntimeException("Map converter failed");
                 }
 
                 @Override
                 public Object readValue(JsonParser parser,
                                       Descriptors.FieldDescriptor mapField,
                                       Descriptors.FieldDescriptor valueField,
-                                      Object key) throws Exception {
-                    throw new RuntimeException("Map converter failed");
+                                      Object key) throws IOException {
+                    throw new IOException("Map converter failed");
                 }
             };
 
@@ -174,24 +155,15 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             // Given: Custom map converter
             JsonInMapConverter customConverter = new JsonInMapConverter() {
                 @Override
-                public boolean canConvert(String fieldName,
-                                        Descriptors.FieldDescriptor.Type keyType,
-                                        Descriptors.FieldDescriptor.Type valueType) {
+                public boolean supports(Descriptors.FieldDescriptor mapField) {
                     return true;
-                }
-
-                @Override
-                public void convert(JsonParser parser,
-                                  Descriptors.FieldDescriptor.Type keyType,
-                                  Descriptors.FieldDescriptor.Type valueType,
-                                  java.util.function.BiConsumer<Object, Object> consumer) throws Exception {
                 }
 
                 @Override
                 public Object readValue(JsonParser parser,
                                       Descriptors.FieldDescriptor mapField,
                                       Descriptors.FieldDescriptor valueField,
-                                      Object key) throws Exception {
+                                      Object key) throws IOException {
                     // Return some value
                     return "converted";
                 }
@@ -221,24 +193,15 @@ class ProtoJsonStreamerAdditionalCoverageTest {
 
             JsonInMapConverter customConverter = new JsonInMapConverter() {
                 @Override
-                public boolean canConvert(String fieldName,
-                                        Descriptors.FieldDescriptor.Type keyType,
-                                        Descriptors.FieldDescriptor.Type valueType) {
+                public boolean supports(Descriptors.FieldDescriptor mapField) {
                     return true;
-                }
-
-                @Override
-                public void convert(JsonParser parser,
-                                  Descriptors.FieldDescriptor.Type keyType,
-                                  Descriptors.FieldDescriptor.Type valueType,
-                                  java.util.function.BiConsumer<Object, Object> consumer) throws Exception {
                 }
 
                 @Override
                 public Object readValue(JsonParser parser,
                                       Descriptors.FieldDescriptor mapField,
                                       Descriptors.FieldDescriptor valueField,
-                                      Object key) throws Exception {
+                                      Object key) throws IOException {
                     converterCalled[0] = true;
                     return "converted_" + key;
                 }
