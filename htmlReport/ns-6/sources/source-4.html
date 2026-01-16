@@ -1,0 +1,529 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=windows-1252"> 
+  <title>Coverage Report > ProtoJsonStreamer</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">org.apache.camel.component.protojson.internal.parser</a>
+</div>
+
+<h1>Coverage Summary for Class: ProtoJsonStreamer (org.apache.camel.component.protojson.internal.parser)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ProtoJsonStreamer</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (9/9)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    62.6%
+  </span>
+  <span class="absValue">
+    (107/171)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">ProtoJsonStreamer$1</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (10/10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    62.8%
+  </span>
+  <span class="absValue">
+    (108/172)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package org.apache.camel.component.protojson.internal.parser;
+&nbsp;
+&nbsp;import com.fasterxml.jackson.core.JsonParser;
+&nbsp;import com.fasterxml.jackson.core.JsonToken;
+&nbsp;import com.google.protobuf.Descriptors;
+&nbsp;import com.google.protobuf.Message;
+&nbsp;
+&nbsp;import org.apache.camel.component.protojson.config.ParserConfig;
+&nbsp;import org.apache.camel.component.protojson.converter.JsonInFieldConverter;
+&nbsp;import org.apache.camel.component.protojson.converter.JsonInMapConverter;
+&nbsp;import org.apache.camel.component.protojson.converter.MessageTypeConverter;
+&nbsp;import org.apache.camel.component.protojson.engine.ProtoJsonException;
+&nbsp;import org.apache.camel.component.protojson.internal.registry.MetaRegistry.MessageMeta;
+&nbsp;import org.apache.camel.component.protojson.internal.registry.MetaRegistry.FieldMeta;
+&nbsp;
+&nbsp;import java.io.IOException;
+&nbsp;
+&nbsp;/**
+&nbsp; * Core streaming JSON parser for converting JSON to Protobuf messages.
+&nbsp; *
+&nbsp; * &lt;p&gt;Zero-DynamicMessage implementation - uses only generated class builders.
+&nbsp; *
+&nbsp; * &lt;p&gt;&lt;strong&gt;INTERNAL USE ONLY&lt;/strong&gt; - This class is not part of the public API
+&nbsp; * and may change without notice.
+&nbsp; */
+&nbsp;public final class ProtoJsonStreamer {
+&nbsp;
+&nbsp;    private ProtoJsonStreamer() {}
+&nbsp;
+&nbsp;    public static void merge(JsonParser p,
+&nbsp;            Descriptors.Descriptor desc,
+&nbsp;            Message.Builder builder,
+&nbsp;            JsonToProtoContext ctx) throws IOException, ProtoJsonException {
+&nbsp;
+<b class="fc">&nbsp;        JsonToken t = p.currentToken();</b>
+<b class="fc">&nbsp;        if (t == null) t = p.nextToken();</b>
+&nbsp;
+<b class="fc">&nbsp;        if (t != JsonToken.START_OBJECT) {</b>
+<b class="fc">&nbsp;            throw new ProtoJsonException(</b>
+&nbsp;                    ProtoJsonException.ErrorCode.INVALID_JSON,
+<b class="fc">&nbsp;                    &quot;Expected START_OBJECT for &quot; + desc.getFullName(),</b>
+<b class="fc">&nbsp;                    desc.getFullName()</b>
+&nbsp;            );
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        MessageMeta meta = ctx.getMetaRegistry().metaFor(desc);</b>
+<b class="fc">&nbsp;        ParserConfig cfg = ctx.getParserConfig();</b>
+&nbsp;
+<b class="fc">&nbsp;        while ((t = p.nextToken()) != JsonToken.END_OBJECT) {</b>
+<b class="fc">&nbsp;            if (t != JsonToken.FIELD_NAME) {</b>
+<b class="nc">&nbsp;                p.skipChildren();</b>
+<b class="nc">&nbsp;                continue;</b>
+&nbsp;            }
+&nbsp;
+<b class="fc">&nbsp;            String fieldName = p.getCurrentName();</b>
+<b class="fc">&nbsp;            JsonToken valueToken = p.nextToken();</b>
+&nbsp;
+<b class="fc">&nbsp;            FieldMeta fm = meta.find(fieldName);</b>
+<b class="fc">&nbsp;            if (fm == null) {</b>
+<b class="fc">&nbsp;                if (cfg.isIgnoringUnknownFields()) {</b>
+<b class="fc">&nbsp;                    p.skipChildren();</b>
+<b class="fc">&nbsp;                    continue;</b>
+&nbsp;                }
+<b class="fc">&nbsp;                throw new ProtoJsonException(</b>
+&nbsp;                        ProtoJsonException.ErrorCode.UNKNOWN_FIELD,
+<b class="fc">&nbsp;                        &quot;Unknown field: &quot; + fieldName + &quot; in &quot; + desc.getFullName(),</b>
+<b class="fc">&nbsp;                        desc.getFullName() + &quot;.&quot; + fieldName</b>
+&nbsp;                );
+&nbsp;            }
+&nbsp;
+<b class="fc">&nbsp;            Descriptors.FieldDescriptor fd = fm.fd;</b>
+&nbsp;
+<b class="fc">&nbsp;            if (valueToken == JsonToken.VALUE_NULL &amp;&amp; cfg.isAllowNullForScalars()) {</b>
+<b class="fc">&nbsp;                continue;</b>
+&nbsp;            }
+&nbsp;
+<b class="fc">&nbsp;            if (fd.isMapField()) {</b>
+<b class="fc">&nbsp;                parseMapField(p, valueToken, fm, builder, ctx);</b>
+<b class="fc">&nbsp;            } else if (fd.isRepeated()) {</b>
+<b class="fc">&nbsp;                parseRepeatedField(p, valueToken, fm, builder, ctx);</b>
+&nbsp;            } else {
+<b class="fc">&nbsp;                parseSingleField(p, valueToken, fm, builder, ctx);</b>
+&nbsp;            }
+<b class="fc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ========== SINGLE FIELD ==========
+&nbsp;
+&nbsp;    private static void parseSingleField(JsonParser p,
+&nbsp;            JsonToken t,
+&nbsp;            FieldMeta fm,
+&nbsp;            Message.Builder builder,
+&nbsp;            JsonToProtoContext ctx) throws IOException, ProtoJsonException {
+&nbsp;
+<b class="fc">&nbsp;        Descriptors.FieldDescriptor fd = fm.fd;</b>
+&nbsp;
+&nbsp;        // 1. Custom converter
+<b class="fc">&nbsp;        JsonInFieldConverter converter = ctx.getParserConfig().getInConverterRegistry().findConverter(fd);</b>
+<b class="fc">&nbsp;        if (converter != null) {</b>
+&nbsp;            try {
+<b class="fc">&nbsp;                converter.read(p, builder, fd);</b>
+&nbsp;                return;
+<b class="nc">&nbsp;            } catch (Exception e) {</b>
+<b class="nc">&nbsp;                throw new ProtoJsonException(</b>
+&nbsp;                        ProtoJsonException.ErrorCode.CUSTOM_CONVERTER_ERROR,
+<b class="nc">&nbsp;                        &quot;Custom converter failed: &quot; + fd.getFullName(),</b>
+<b class="nc">&nbsp;                        fd.getFullName(), e</b>
+&nbsp;                );
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+&nbsp;        // 2. Parse and set value
+<b class="fc">&nbsp;        Object value = parseValue(p, t, fm, ctx);</b>
+<b class="fc">&nbsp;        builder.setField(fd, value);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ========== REPEATED FIELD ==========
+&nbsp;
+&nbsp;    private static void parseRepeatedField(JsonParser p,
+&nbsp;            JsonToken t,
+&nbsp;            FieldMeta fm,
+&nbsp;            Message.Builder builder,
+&nbsp;            JsonToProtoContext ctx) throws IOException, ProtoJsonException {
+&nbsp;
+<b class="fc">&nbsp;        if (t == JsonToken.START_ARRAY) {</b>
+<b class="fc">&nbsp;            while ((t = p.nextToken()) != JsonToken.END_ARRAY) {</b>
+<b class="fc">&nbsp;                addRepeatedElement(p, t, fm, builder, ctx);</b>
+&nbsp;            }
+&nbsp;        } else {
+<b class="fc">&nbsp;            addRepeatedElement(p, t, fm, builder, ctx);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    private static void addRepeatedElement(JsonParser p,
+&nbsp;            JsonToken t,
+&nbsp;            FieldMeta fm,
+&nbsp;            Message.Builder builder,
+&nbsp;            JsonToProtoContext ctx) throws IOException, ProtoJsonException {
+&nbsp;
+<b class="fc">&nbsp;        Descriptors.FieldDescriptor fd = fm.fd;</b>
+&nbsp;
+&nbsp;        // 1. Custom converter
+<b class="fc">&nbsp;        JsonInFieldConverter converter = ctx.getParserConfig().getInConverterRegistry().findConverter(fd);</b>
+<b class="fc">&nbsp;        if (converter != null) {</b>
+&nbsp;            try {
+<b class="nc">&nbsp;                converter.read(p, builder, fd);</b>
+&nbsp;                return;
+<b class="nc">&nbsp;            } catch (Exception e) {</b>
+<b class="nc">&nbsp;                throw new ProtoJsonException(</b>
+&nbsp;                        ProtoJsonException.ErrorCode.CUSTOM_CONVERTER_ERROR,
+<b class="nc">&nbsp;                        &quot;Custom converter failed: &quot; + fd.getFullName(),</b>
+<b class="nc">&nbsp;                        fd.getFullName(), e</b>
+&nbsp;                );
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+&nbsp;        // 2. Parse and add value
+<b class="fc">&nbsp;        Object value = parseValue(p, t, fm, ctx);</b>
+<b class="fc">&nbsp;        builder.addRepeatedField(fd, value);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ========== MAP FIELD ==========
+&nbsp;
+&nbsp;    private static void parseMapField(JsonParser p,
+&nbsp;            JsonToken t,
+&nbsp;            FieldMeta fm,
+&nbsp;            Message.Builder builder,
+&nbsp;            JsonToProtoContext ctx) throws IOException, ProtoJsonException {
+&nbsp;
+<b class="fc">&nbsp;        Descriptors.FieldDescriptor fd = fm.fd;</b>
+&nbsp;
+<b class="fc">&nbsp;        if (t != JsonToken.START_OBJECT) {</b>
+<b class="fc">&nbsp;            throw new ProtoJsonException(</b>
+&nbsp;                    ProtoJsonException.ErrorCode.TYPE_MISMATCH,
+<b class="fc">&nbsp;                    &quot;Map field must be JSON object: &quot; + fd.getFullName(),</b>
+<b class="fc">&nbsp;                    fd.getFullName()</b>
+&nbsp;            );
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        Descriptors.Descriptor entryDesc = fd.getMessageType();</b>
+<b class="fc">&nbsp;        Descriptors.FieldDescriptor keyFd = entryDesc.findFieldByName(&quot;key&quot;);</b>
+<b class="fc">&nbsp;        Descriptors.FieldDescriptor valFd = entryDesc.findFieldByName(&quot;value&quot;);</b>
+<b class="fc">&nbsp;        ParserConfig cfg = ctx.getParserConfig();</b>
+&nbsp;
+&nbsp;        // Get entry metadata from FieldMeta (cached, no lookup!)
+<b class="fc">&nbsp;        MessageMeta entryMeta = fm.nestedMeta;</b>
+<b class="fc">&nbsp;        FieldMeta valueFm = entryMeta.find(&quot;value&quot;);</b>
+&nbsp;
+&nbsp;        // Custom converter check
+<b class="fc">&nbsp;        JsonInMapConverter mapConverter = cfg.getMapConverterRegistry().findConverter(fd);</b>
+&nbsp;
+<b class="fc">&nbsp;        if (mapConverter == null) {</b>
+&nbsp;            // Standard path: Create map entries using builders from registry
+<b class="fc">&nbsp;            while ((t = p.nextToken()) != JsonToken.END_OBJECT) {</b>
+<b class="fc">&nbsp;                if (t != JsonToken.FIELD_NAME) {</b>
+<b class="nc">&nbsp;                    p.skipChildren();</b>
+<b class="nc">&nbsp;                    continue;</b>
+&nbsp;                }
+&nbsp;
+<b class="fc">&nbsp;                String jsonKey = p.getCurrentName();</b>
+<b class="fc">&nbsp;                JsonToken valToken = p.nextToken();</b>
+&nbsp;
+<b class="fc">&nbsp;                if (valToken == JsonToken.VALUE_NULL &amp;&amp; cfg.isAllowNullForScalars()) {</b>
+<b class="fc">&nbsp;                    continue;</b>
+&nbsp;                }
+&nbsp;
+<b class="fc">&nbsp;                Object key = convertMapKey(jsonKey, keyFd);</b>
+<b class="fc">&nbsp;                Object value = parseValue(p, valToken, valueFm, ctx);</b>
+&nbsp;
+&nbsp;                // Create entry using builder from MetaRegistry
+<b class="fc">&nbsp;                Message.Builder entryBuilder = entryMeta.newBuilder();</b>
+<b class="fc">&nbsp;                entryBuilder.setField(keyFd, key);</b>
+<b class="fc">&nbsp;                entryBuilder.setField(valFd, value);</b>
+<b class="fc">&nbsp;                builder.addRepeatedField(fd, entryBuilder.build());</b>
+<b class="fc">&nbsp;            }</b>
+&nbsp;        } else {
+&nbsp;            // Custom converter path
+<b class="nc">&nbsp;            Message.Builder entryBuilder = entryMeta.newBuilder();</b>
+&nbsp;
+<b class="nc">&nbsp;            while ((t = p.nextToken()) != JsonToken.END_OBJECT) {</b>
+<b class="nc">&nbsp;                if (t != JsonToken.FIELD_NAME) {</b>
+<b class="nc">&nbsp;                    p.skipChildren();</b>
+<b class="nc">&nbsp;                    continue;</b>
+&nbsp;                }
+&nbsp;
+<b class="nc">&nbsp;                String jsonKey = p.getCurrentName();</b>
+<b class="nc">&nbsp;                JsonToken valToken = p.nextToken();</b>
+&nbsp;
+<b class="nc">&nbsp;                Object keyValue = convertMapKey(jsonKey, keyFd);</b>
+<b class="nc">&nbsp;                entryBuilder.clear();</b>
+<b class="nc">&nbsp;                entryBuilder.setField(keyFd, keyValue);</b>
+&nbsp;
+<b class="nc">&nbsp;                if (valToken == JsonToken.VALUE_NULL &amp;&amp; cfg.isAllowNullForScalars()) {</b>
+<b class="nc">&nbsp;                    continue;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                try {
+<b class="nc">&nbsp;                    Object convertedValue = mapConverter.readValue(p, fd, valFd, keyValue);</b>
+<b class="nc">&nbsp;                    entryBuilder.setField(valFd, convertedValue);</b>
+<b class="nc">&nbsp;                    builder.addRepeatedField(fd, entryBuilder.build());</b>
+<b class="nc">&nbsp;                } catch (Exception e) {</b>
+<b class="nc">&nbsp;                    throw new ProtoJsonException(</b>
+&nbsp;                            ProtoJsonException.ErrorCode.CUSTOM_CONVERTER_ERROR,
+<b class="nc">&nbsp;                            &quot;Custom map converter failed: &quot; + fd.getFullName(),</b>
+<b class="nc">&nbsp;                            fd.getFullName(), e</b>
+&nbsp;                    );
+<b class="nc">&nbsp;                }</b>
+<b class="nc">&nbsp;            }</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    // ========== VALUE PARSING ==========
+&nbsp;
+&nbsp;    private static Object parseValue(JsonParser p,
+&nbsp;            JsonToken t,
+&nbsp;            FieldMeta fm,
+&nbsp;            JsonToProtoContext ctx) throws IOException, ProtoJsonException {
+&nbsp;
+<b class="fc">&nbsp;        Descriptors.FieldDescriptor fd = fm.fd;</b>
+&nbsp;
+<b class="fc">&nbsp;        return switch (fd.getJavaType()) {</b>
+&nbsp;            case STRING -&gt; {
+<b class="fc">&nbsp;                if (!t.isScalarValue()) throw typeMismatch(fd, &quot;string&quot;);</b>
+<b class="fc">&nbsp;                yield p.getValueAsString();</b>
+&nbsp;            }
+&nbsp;            case INT -&gt; {
+<b class="fc">&nbsp;                if (t.isNumeric()) yield p.getIntValue();</b>
+<b class="fc">&nbsp;                if (t.isScalarValue()) yield Integer.parseInt(p.getValueAsString());</b>
+<b class="nc">&nbsp;                throw typeMismatch(fd, &quot;int32&quot;);</b>
+&nbsp;            }
+&nbsp;            case LONG -&gt; {
+<b class="nc">&nbsp;                if (t.isNumeric()) yield p.getLongValue();</b>
+<b class="nc">&nbsp;                if (t.isScalarValue()) yield Long.parseLong(p.getValueAsString());</b>
+<b class="nc">&nbsp;                throw typeMismatch(fd, &quot;int64&quot;);</b>
+&nbsp;            }
+&nbsp;            case DOUBLE -&gt; {
+<b class="nc">&nbsp;                if (t.isNumeric()) yield p.getDoubleValue();</b>
+<b class="nc">&nbsp;                if (t.isScalarValue()) yield Double.parseDouble(p.getValueAsString());</b>
+<b class="nc">&nbsp;                throw typeMismatch(fd, &quot;double&quot;);</b>
+&nbsp;            }
+&nbsp;            case FLOAT -&gt; {
+<b class="nc">&nbsp;                if (t.isNumeric()) yield (float) p.getDoubleValue();</b>
+<b class="nc">&nbsp;                if (t.isScalarValue()) yield Float.parseFloat(p.getValueAsString());</b>
+<b class="nc">&nbsp;                throw typeMismatch(fd, &quot;float&quot;);</b>
+&nbsp;            }
+&nbsp;            case BOOLEAN -&gt; {
+<b class="fc">&nbsp;                if (t == JsonToken.VALUE_TRUE || t == JsonToken.VALUE_FALSE) yield p.getBooleanValue();</b>
+<b class="nc">&nbsp;                if (t.isScalarValue()) yield Boolean.parseBoolean(p.getValueAsString());</b>
+<b class="nc">&nbsp;                throw typeMismatch(fd, &quot;bool&quot;);</b>
+&nbsp;            }
+&nbsp;            case BYTE_STRING -&gt; {
+<b class="fc">&nbsp;                if (!t.isScalarValue()) throw typeMismatch(fd, &quot;bytes (base64)&quot;);</b>
+<b class="fc">&nbsp;                String base64 = p.getValueAsString();</b>
+&nbsp;                try {
+<b class="fc">&nbsp;                    byte[] decoded = java.util.Base64.getDecoder().decode(base64);</b>
+<b class="fc">&nbsp;                    yield com.google.protobuf.ByteString.copyFrom(decoded);</b>
+<b class="nc">&nbsp;                } catch (IllegalArgumentException e) {</b>
+<b class="nc">&nbsp;                    throw new ProtoJsonException(</b>
+&nbsp;                            ProtoJsonException.ErrorCode.TYPE_MISMATCH,
+<b class="nc">&nbsp;                            &quot;Invalid Base64 for bytes: &quot; + fd.getFullName(),</b>
+<b class="nc">&nbsp;                            fd.getFullName(), e</b>
+&nbsp;                    );
+&nbsp;                }
+&nbsp;            }
+<b class="fc">&nbsp;            case ENUM -&gt; parseEnumValue(p, t, fd, ctx.getParserConfig());</b>
+&nbsp;            case MESSAGE -&gt; {
+&nbsp;                // Use cached MessageMeta from FieldMeta (no registry lookup!)
+<b class="fc">&nbsp;                MessageMeta nestedMeta = fm.nestedMeta;</b>
+<b class="fc">&nbsp;                Message.Builder nestedBuilder = nestedMeta.newBuilder();</b>
+<b class="fc">&nbsp;                Descriptors.Descriptor nestedDesc = fd.getMessageType();</b>
+<b class="fc">&nbsp;                MessageTypeConverter conv = ctx.getRegistry().get(nestedDesc);</b>
+<b class="fc">&nbsp;                conv.mergeInto(p, nestedDesc, nestedBuilder, ctx);</b>
+<b class="fc">&nbsp;                yield nestedBuilder.build();</b>
+&nbsp;            }
+&nbsp;        };
+&nbsp;    }
+&nbsp;
+&nbsp;    private static Descriptors.EnumValueDescriptor parseEnumValue(
+&nbsp;            JsonParser p,
+&nbsp;            JsonToken t,
+&nbsp;            Descriptors.FieldDescriptor fd,
+&nbsp;            ParserConfig cfg) throws IOException, ProtoJsonException {
+&nbsp;
+<b class="fc">&nbsp;        Descriptors.EnumDescriptor enumDesc = fd.getEnumType();</b>
+<b class="fc">&nbsp;        Descriptors.EnumValueDescriptor ev = null;</b>
+&nbsp;
+<b class="fc">&nbsp;        if (t.isNumeric() &amp;&amp; cfg.isAcceptNumericEnums()) {</b>
+<b class="fc">&nbsp;            int number = p.getIntValue();</b>
+<b class="fc">&nbsp;            ev = enumDesc.findValueByNumber(number);</b>
+<b class="fc">&nbsp;        } else if (t.isScalarValue()) {</b>
+<b class="fc">&nbsp;            String name = p.getValueAsString();</b>
+<b class="fc">&nbsp;            ev = enumDesc.findValueByName(name);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        if (ev == null) {</b>
+<b class="fc">&nbsp;            throw new ProtoJsonException(</b>
+&nbsp;                    ProtoJsonException.ErrorCode.INVALID_ENUM_VALUE,
+<b class="fc">&nbsp;                    &quot;Invalid enum value for &quot; + fd.getFullName(),</b>
+<b class="fc">&nbsp;                    fd.getFullName()</b>
+&nbsp;            );
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        return ev;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ========== HELPERS ==========
+&nbsp;
+&nbsp;    private static Object convertMapKey(String jsonKey,
+&nbsp;            Descriptors.FieldDescriptor keyFd) throws ProtoJsonException {
+<b class="fc">&nbsp;        return switch (keyFd.getJavaType()) {</b>
+<b class="fc">&nbsp;            case STRING -&gt; jsonKey;</b>
+&nbsp;            case INT -&gt; {
+&nbsp;                try {
+<b class="fc">&nbsp;                    yield Integer.parseInt(jsonKey);</b>
+<b class="nc">&nbsp;                } catch (NumberFormatException e) {</b>
+<b class="nc">&nbsp;                    throw new ProtoJsonException(</b>
+&nbsp;                            ProtoJsonException.ErrorCode.TYPE_MISMATCH,
+&nbsp;                            &quot;Invalid int32 map key: &quot; + jsonKey,
+<b class="nc">&nbsp;                            keyFd.getFullName(), e</b>
+&nbsp;                    );
+&nbsp;                }
+&nbsp;            }
+&nbsp;            case LONG -&gt; {
+&nbsp;                try {
+<b class="nc">&nbsp;                    yield Long.parseLong(jsonKey);</b>
+<b class="nc">&nbsp;                } catch (NumberFormatException e) {</b>
+<b class="nc">&nbsp;                    throw new ProtoJsonException(</b>
+&nbsp;                            ProtoJsonException.ErrorCode.TYPE_MISMATCH,
+&nbsp;                            &quot;Invalid int64 map key: &quot; + jsonKey,
+<b class="nc">&nbsp;                            keyFd.getFullName(), e</b>
+&nbsp;                    );
+&nbsp;                }
+&nbsp;            }
+&nbsp;            case BOOLEAN -&gt; {
+<b class="nc">&nbsp;                if (&quot;true&quot;.equalsIgnoreCase(jsonKey) || &quot;false&quot;.equalsIgnoreCase(jsonKey)) {</b>
+<b class="nc">&nbsp;                    yield Boolean.parseBoolean(jsonKey);</b>
+&nbsp;                }
+<b class="nc">&nbsp;                throw new ProtoJsonException(</b>
+&nbsp;                        ProtoJsonException.ErrorCode.TYPE_MISMATCH,
+&nbsp;                        &quot;Invalid bool map key: &quot; + jsonKey,
+<b class="nc">&nbsp;                        keyFd.getFullName()</b>
+&nbsp;                );
+&nbsp;            }
+<b class="nc">&nbsp;            default -&gt; throw new ProtoJsonException(</b>
+&nbsp;                    ProtoJsonException.ErrorCode.TYPE_MISMATCH,
+<b class="nc">&nbsp;                    &quot;Unsupported map key type: &quot; + keyFd.getJavaType(),</b>
+<b class="nc">&nbsp;                    keyFd.getFullName()</b>
+&nbsp;            );
+&nbsp;        };
+&nbsp;    }
+&nbsp;
+&nbsp;    private static ProtoJsonException typeMismatch(Descriptors.FieldDescriptor fd, String expected) {
+<b class="fc">&nbsp;        return new ProtoJsonException(</b>
+&nbsp;                ProtoJsonException.ErrorCode.TYPE_MISMATCH,
+<b class="fc">&nbsp;                &quot;Expected &quot; + expected + &quot; for &quot; + fd.getFullName(),</b>
+<b class="fc">&nbsp;                fd.getFullName()</b>
+&nbsp;        );
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-01-16 02:59</div>
+</div>
+</body>
+</html>

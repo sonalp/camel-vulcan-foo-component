@@ -1,0 +1,271 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=windows-1252"> 
+  <title>Coverage Report > DefaultMessageJsonConverter</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">org.apache.camel.component.protojson.internal.printer</a>
+</div>
+
+<h1>Coverage Summary for Class: DefaultMessageJsonConverter (org.apache.camel.component.protojson.internal.printer)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">DefaultMessageJsonConverter</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (5/5)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    91.7%
+  </span>
+  <span class="absValue">
+    (66/72)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">DefaultMessageJsonConverter$1</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (6/6)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    91.8%
+  </span>
+  <span class="absValue">
+    (67/73)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package org.apache.camel.component.protojson.internal.printer;
+&nbsp;
+&nbsp;import com.fasterxml.jackson.core.JsonGenerator;
+&nbsp;import com.google.protobuf.Descriptors;
+&nbsp;import com.google.protobuf.Message;
+&nbsp;import org.apache.camel.component.protojson.config.PrinterConfig;
+&nbsp;import org.apache.camel.component.protojson.converter.JsonOutFieldConverter;
+&nbsp;import org.apache.camel.component.protojson.converter.MessageJsonConverter;
+&nbsp;import org.apache.camel.component.protojson.internal.registry.FieldConverterRegistry;
+&nbsp;
+&nbsp;import java.io.IOException;
+&nbsp;import java.util.List;
+&nbsp;
+<b class="fc">&nbsp;public final class DefaultMessageJsonConverter implements MessageJsonConverter {</b>
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void write(Message msg,
+&nbsp;            Descriptors.Descriptor desc,
+&nbsp;            JsonGenerator gen,
+&nbsp;            ProtoToJsonContext ctx) throws IOException {
+&nbsp;
+<b class="fc">&nbsp;        PrinterConfig cfg = ctx.getPrinterConfig();</b>
+<b class="fc">&nbsp;        gen.writeStartObject();</b>
+&nbsp;
+<b class="fc">&nbsp;        for (Descriptors.FieldDescriptor fd : desc.getFields()) {</b>
+<b class="fc">&nbsp;            if (fd.isRepeated()) {</b>
+<b class="fc">&nbsp;                if (!cfg.isIncludingDefaultValueFields()</b>
+<b class="fc">&nbsp;                        &amp;&amp; msg.getRepeatedFieldCount(fd) == 0) {</b>
+<b class="fc">&nbsp;                    continue;</b>
+&nbsp;                }
+&nbsp;            } else {
+<b class="fc">&nbsp;                if (!msg.hasField(fd)</b>
+<b class="fc">&nbsp;                        &amp;&amp; !cfg.isIncludingDefaultValueFields()) {</b>
+<b class="fc">&nbsp;                    continue;</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;
+<b class="fc">&nbsp;            String fieldName = cfg.isPreservingProtoFieldNames()</b>
+<b class="fc">&nbsp;                    ? fd.getName()</b>
+<b class="fc">&nbsp;                    : fd.getJsonName();</b>
+&nbsp;
+&nbsp;            // Check for custom converter first - O(1) lookup with caching
+<b class="fc">&nbsp;            FieldConverterRegistry&lt;JsonOutFieldConverter&gt; registry = cfg.getOutConverterRegistry();</b>
+<b class="fc">&nbsp;            JsonOutFieldConverter converter = registry.findConverter(fd);</b>
+&nbsp;
+<b class="fc">&nbsp;            if (converter != null) {</b>
+&nbsp;                try {
+<b class="fc">&nbsp;                    gen.writeFieldName(fieldName);</b>
+<b class="fc">&nbsp;                    converter.write(gen, msg, fd);</b>
+<b class="fc">&nbsp;                    continue;</b>
+<b class="nc">&nbsp;                } catch (Exception e) {</b>
+<b class="nc">&nbsp;                    throw new IOException(</b>
+<b class="nc">&nbsp;                            &quot;Custom converter failed for field: &quot; + fd.getFullName(), e</b>
+&nbsp;                    );
+&nbsp;                }
+&nbsp;            }
+&nbsp;
+<b class="fc">&nbsp;            gen.writeFieldName(fieldName);</b>
+&nbsp;
+<b class="fc">&nbsp;            if (fd.isMapField()) {</b>
+<b class="fc">&nbsp;                writeMapField(msg, fd, gen, ctx);</b>
+<b class="fc">&nbsp;            } else if (fd.isRepeated()) {</b>
+<b class="fc">&nbsp;                writeRepeatedField(msg, fd, gen, ctx);</b>
+&nbsp;            } else {
+<b class="fc">&nbsp;                Object v = msg.getField(fd);</b>
+<b class="fc">&nbsp;                writeSingleField(v, fd, gen, ctx);</b>
+&nbsp;            }
+<b class="fc">&nbsp;        }</b>
+&nbsp;
+<b class="fc">&nbsp;        gen.writeEndObject();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private void writeSingleField(Object value,
+&nbsp;            Descriptors.FieldDescriptor fd,
+&nbsp;            JsonGenerator gen,
+&nbsp;            ProtoToJsonContext ctx) throws IOException {
+<b class="fc">&nbsp;        PrinterConfig cfg = ctx.getPrinterConfig();</b>
+&nbsp;
+<b class="fc">&nbsp;        switch (fd.getJavaType()) {</b>
+<b class="fc">&nbsp;            case STRING  -&gt; gen.writeString((String) value);</b>
+<b class="fc">&nbsp;            case INT     -&gt; gen.writeNumber((Integer) value);</b>
+<b class="nc">&nbsp;            case LONG    -&gt; gen.writeNumber((Long) value);</b>
+<b class="nc">&nbsp;            case DOUBLE  -&gt; gen.writeNumber((Double) value);</b>
+<b class="nc">&nbsp;            case FLOAT   -&gt; gen.writeNumber((Float) value);</b>
+<b class="fc">&nbsp;            case BOOLEAN -&gt; gen.writeBoolean((Boolean) value);</b>
+&nbsp;            case BYTE_STRING -&gt; {
+<b class="fc">&nbsp;                com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) value;</b>
+<b class="fc">&nbsp;                String base64 = java.util.Base64.getEncoder().encodeToString(bs.toByteArray());</b>
+<b class="fc">&nbsp;                gen.writeString(base64);</b>
+<b class="fc">&nbsp;            }</b>
+&nbsp;            case ENUM -&gt; {
+<b class="fc">&nbsp;                Descriptors.EnumValueDescriptor ev = (Descriptors.EnumValueDescriptor) value;</b>
+<b class="fc">&nbsp;                if (cfg.isPrintingEnumsAsInts()) {</b>
+<b class="fc">&nbsp;                    gen.writeNumber(ev.getNumber());</b>
+&nbsp;                } else {
+<b class="fc">&nbsp;                    gen.writeString(ev.getName());</b>
+&nbsp;                }
+<b class="fc">&nbsp;            }</b>
+&nbsp;            case MESSAGE -&gt; {
+<b class="fc">&nbsp;                Message nested = (Message) value;</b>
+<b class="fc">&nbsp;                Descriptors.Descriptor nestedDesc = fd.getMessageType();</b>
+<b class="fc">&nbsp;                MessageJsonConverter conv = ctx.getRegistry().get(nestedDesc);</b>
+<b class="fc">&nbsp;                conv.write(nested, nestedDesc, gen, ctx);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    private void writeRepeatedField(Message msg,
+&nbsp;            Descriptors.FieldDescriptor fd,
+&nbsp;            JsonGenerator gen,
+&nbsp;            ProtoToJsonContext ctx) throws IOException {
+<b class="fc">&nbsp;        gen.writeStartArray();</b>
+<b class="fc">&nbsp;        int n = msg.getRepeatedFieldCount(fd);</b>
+<b class="fc">&nbsp;        for (int i = 0; i &lt; n; i++) {</b>
+<b class="fc">&nbsp;            Object v = msg.getRepeatedField(fd, i);</b>
+<b class="fc">&nbsp;            writeSingleField(v, fd, gen, ctx);</b>
+&nbsp;        }
+<b class="fc">&nbsp;        gen.writeEndArray();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @SuppressWarnings(&quot;unchecked&quot;)
+&nbsp;    private void writeMapField(Message msg,
+&nbsp;            Descriptors.FieldDescriptor fd,
+&nbsp;            JsonGenerator gen,
+&nbsp;            ProtoToJsonContext ctx) throws IOException {
+<b class="fc">&nbsp;        List&lt;Message&gt; entries = (List&lt;Message&gt;) msg.getField(fd);</b>
+<b class="fc">&nbsp;        Descriptors.Descriptor entryDesc = fd.getMessageType();</b>
+<b class="fc">&nbsp;        Descriptors.FieldDescriptor keyFd = entryDesc.findFieldByName(&quot;key&quot;);</b>
+<b class="fc">&nbsp;        Descriptors.FieldDescriptor valFd = entryDesc.findFieldByName(&quot;value&quot;);</b>
+&nbsp;
+<b class="fc">&nbsp;        gen.writeStartObject();</b>
+<b class="fc">&nbsp;        for (Message entry : entries) {</b>
+<b class="fc">&nbsp;            Object keyObj = entry.getField(keyFd);</b>
+<b class="fc">&nbsp;            String key = String.valueOf(keyObj);</b>
+<b class="fc">&nbsp;            gen.writeFieldName(key);</b>
+<b class="fc">&nbsp;            Object val = entry.getField(valFd);</b>
+<b class="fc">&nbsp;            writeSingleField(val, valFd, gen, ctx);</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        gen.writeEndObject();</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-01-16 02:59</div>
+</div>
+</body>
+</html>

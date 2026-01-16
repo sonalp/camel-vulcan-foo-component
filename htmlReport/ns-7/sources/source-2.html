@@ -1,0 +1,181 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=windows-1252"> 
+  <title>Coverage Report > MessageJsonConverterRegistry</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">org.apache.camel.component.protojson.internal.printer</a>
+</div>
+
+<h1>Coverage Summary for Class: MessageJsonConverterRegistry (org.apache.camel.component.protojson.internal.printer)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">MessageJsonConverterRegistry</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (4/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (7/7)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">MessageJsonConverterRegistry$Builder</td>
+<td class="coverageStat">
+  <span class="percent">
+    66.7%
+  </span>
+  <span class="absValue">
+    (2/3)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    66.7%
+  </span>
+  <span class="absValue">
+    (4/6)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    85.7%
+  </span>
+  <span class="absValue">
+    (6/7)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    84.6%
+  </span>
+  <span class="absValue">
+    (11/13)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package org.apache.camel.component.protojson.internal.printer;
+&nbsp;
+&nbsp;import com.google.protobuf.Descriptors;
+&nbsp;import org.apache.camel.component.protojson.converter.MessageJsonConverter;
+&nbsp;
+&nbsp;import java.util.Collections;
+&nbsp;import java.util.HashMap;
+&nbsp;import java.util.Map;
+&nbsp;
+&nbsp;public final class MessageJsonConverterRegistry {
+&nbsp;
+&nbsp;    private final Map&lt;String, MessageJsonConverter&gt; converters;
+&nbsp;    private final MessageJsonConverter defaultConverter;
+&nbsp;
+&nbsp;    public MessageJsonConverterRegistry(MessageJsonConverter defaultConverter,
+<b class="fc">&nbsp;                                        Map&lt;String, MessageJsonConverter&gt; converters) {</b>
+<b class="fc">&nbsp;        this.defaultConverter = defaultConverter;</b>
+<b class="fc">&nbsp;        this.converters = Collections.unmodifiableMap(new HashMap&lt;&gt;(converters));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public MessageJsonConverter get(Descriptors.Descriptor desc) {
+<b class="fc">&nbsp;        MessageJsonConverter c = converters.get(desc.getFullName());</b>
+<b class="fc">&nbsp;        return c != null ? c : defaultConverter;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static MessageJsonConverterRegistry withDefault() {
+<b class="fc">&nbsp;        return new MessageJsonConverterRegistry(new DefaultMessageJsonConverter(), Map.of());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Builder newBuilder(MessageJsonConverter defaultConverter) {
+<b class="fc">&nbsp;        return new Builder(defaultConverter);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static final class Builder {
+&nbsp;        private final MessageJsonConverter defaultConverter;
+<b class="fc">&nbsp;        private final Map&lt;String, MessageJsonConverter&gt; map = new HashMap&lt;&gt;();</b>
+&nbsp;
+<b class="fc">&nbsp;        public Builder(MessageJsonConverter defaultConverter) {</b>
+<b class="fc">&nbsp;            this.defaultConverter = defaultConverter;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder register(Descriptors.Descriptor desc, MessageJsonConverter c) {
+<b class="nc">&nbsp;            map.put(desc.getFullName(), c);</b>
+<b class="nc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public MessageJsonConverterRegistry build() {
+<b class="fc">&nbsp;            return new MessageJsonConverterRegistry(defaultConverter, map);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-01-16 02:59</div>
+</div>
+</body>
+</html>

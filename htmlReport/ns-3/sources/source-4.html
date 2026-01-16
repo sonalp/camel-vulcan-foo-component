@@ -1,0 +1,214 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=windows-1252"> 
+  <title>Coverage Report > TimestampConverter</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">org.apache.camel.component.protojson.converter.wellknown</a>
+</div>
+
+<h1>Coverage Summary for Class: TimestampConverter (org.apache.camel.component.protojson.converter.wellknown)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">TimestampConverter</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (4/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    97.6%
+  </span>
+  <span class="absValue">
+    (40/41)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package org.apache.camel.component.protojson.converter.wellknown;
+&nbsp;
+&nbsp;import com.fasterxml.jackson.core.JsonGenerator;
+&nbsp;import com.fasterxml.jackson.core.JsonParser;
+&nbsp;import com.fasterxml.jackson.core.JsonToken;
+&nbsp;import com.google.protobuf.Descriptors;
+&nbsp;import com.google.protobuf.Message;
+&nbsp;import com.google.protobuf.Timestamp;
+&nbsp;import org.apache.camel.component.protojson.converter.JsonInFieldConverter;
+&nbsp;import org.apache.camel.component.protojson.converter.JsonOutFieldConverter;
+&nbsp;
+&nbsp;import java.io.IOException;
+&nbsp;import java.time.Instant;
+&nbsp;import java.time.format.DateTimeFormatter;
+&nbsp;import java.time.format.DateTimeParseException;
+&nbsp;
+&nbsp;/**
+&nbsp; * Converter for google.protobuf.Timestamp.
+&nbsp; * JSON format: RFC 3339 string (e.g., &quot;2024-01-15T10:30:00.123Z&quot;)
+&nbsp; */
+<b class="fc">&nbsp;public class TimestampConverter implements JsonInFieldConverter, JsonOutFieldConverter {</b>
+&nbsp;
+&nbsp;    private static final String TIMESTAMP_TYPE = &quot;google.protobuf.Timestamp&quot;;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean supports(Descriptors.FieldDescriptor field) {
+<b class="fc">&nbsp;        return field.getJavaType() == Descriptors.FieldDescriptor.JavaType.MESSAGE</b>
+<b class="fc">&nbsp;                &amp;&amp; field.getMessageType().getFullName().equals(TIMESTAMP_TYPE);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ==================== JSON -&gt; Proto ====================
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void read(JsonParser parser, Message.Builder builder,
+&nbsp;                     Descriptors.FieldDescriptor field) throws IOException {
+&nbsp;        
+<b class="fc">&nbsp;        JsonToken token = parser.currentToken();</b>
+&nbsp;        
+&nbsp;        // Handle null
+<b class="fc">&nbsp;        if (token == JsonToken.VALUE_NULL) {</b>
+&nbsp;            return;
+&nbsp;        }
+&nbsp;        
+&nbsp;        // Handle string (ISO-8601 format)
+<b class="fc">&nbsp;        if (token == JsonToken.VALUE_STRING) {</b>
+<b class="fc">&nbsp;            String isoDate = parser.getText();</b>
+<b class="fc">&nbsp;            if (isoDate == null || isoDate.isEmpty()) {</b>
+&nbsp;                return;
+&nbsp;            }
+&nbsp;
+&nbsp;            try {
+<b class="fc">&nbsp;                Instant instant = Instant.parse(isoDate);</b>
+&nbsp;                
+<b class="fc">&nbsp;                Timestamp ts = Timestamp.newBuilder()</b>
+<b class="fc">&nbsp;                        .setSeconds(instant.getEpochSecond())</b>
+<b class="fc">&nbsp;                        .setNanos(instant.getNano())</b>
+<b class="fc">&nbsp;                        .build();</b>
+&nbsp;
+<b class="fc">&nbsp;                builder.setField(field, ts);</b>
+<b class="fc">&nbsp;            } catch (DateTimeParseException e) {</b>
+<b class="fc">&nbsp;                throw new IOException(&quot;Invalid Timestamp format: &quot; + isoDate, e);</b>
+<b class="fc">&nbsp;            }</b>
+&nbsp;            return;
+&nbsp;        }
+&nbsp;        
+&nbsp;        // Handle object format {&quot;seconds&quot;: ..., &quot;nanos&quot;: ...}
+<b class="fc">&nbsp;        if (token == JsonToken.START_OBJECT) {</b>
+<b class="fc">&nbsp;            long seconds = 0;</b>
+<b class="fc">&nbsp;            int nanos = 0;</b>
+&nbsp;            
+<b class="fc">&nbsp;            while (parser.nextToken() != JsonToken.END_OBJECT) {</b>
+<b class="fc">&nbsp;                String fieldName = parser.getCurrentName();</b>
+<b class="fc">&nbsp;                parser.nextToken();</b>
+&nbsp;                
+<b class="fc">&nbsp;                if (&quot;seconds&quot;.equals(fieldName)) {</b>
+<b class="fc">&nbsp;                    seconds = parser.getLongValue();</b>
+<b class="fc">&nbsp;                } else if (&quot;nanos&quot;.equals(fieldName)) {</b>
+<b class="fc">&nbsp;                    nanos = parser.getIntValue();</b>
+&nbsp;                }
+<b class="fc">&nbsp;            }</b>
+&nbsp;            
+<b class="fc">&nbsp;            Timestamp ts = Timestamp.newBuilder()</b>
+<b class="fc">&nbsp;                    .setSeconds(seconds)</b>
+<b class="fc">&nbsp;                    .setNanos(nanos)</b>
+<b class="fc">&nbsp;                    .build();</b>
+&nbsp;            
+<b class="fc">&nbsp;            builder.setField(field, ts);</b>
+&nbsp;            return;
+&nbsp;        }
+&nbsp;        
+<b class="nc">&nbsp;        throw new IOException(&quot;Unexpected token for Timestamp: &quot; + token);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ==================== Proto -&gt; JSON ====================
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void write(JsonGenerator gen, Message message,
+&nbsp;                      Descriptors.FieldDescriptor field) throws IOException {
+<b class="fc">&nbsp;        Message tsMsg = (Message) message.getField(field);</b>
+&nbsp;        
+<b class="fc">&nbsp;        Descriptors.Descriptor desc = tsMsg.getDescriptorForType();</b>
+<b class="fc">&nbsp;        long seconds = (Long) tsMsg.getField(desc.findFieldByName(&quot;seconds&quot;));</b>
+<b class="fc">&nbsp;        int nanos = (Integer) tsMsg.getField(desc.findFieldByName(&quot;nanos&quot;));</b>
+&nbsp;
+<b class="fc">&nbsp;        Instant instant = Instant.ofEpochSecond(seconds, nanos);</b>
+<b class="fc">&nbsp;        String isoDate = DateTimeFormatter.ISO_INSTANT.format(instant);</b>
+&nbsp;        
+<b class="fc">&nbsp;        gen.writeString(isoDate);</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-01-16 02:59</div>
+</div>
+</body>
+</html>

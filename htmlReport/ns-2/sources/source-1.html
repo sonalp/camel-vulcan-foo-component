@@ -1,0 +1,251 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=windows-1252"> 
+  <title>Coverage Report > ParserConfig</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">org.apache.camel.component.protojson.config</a>
+</div>
+
+<h1>Coverage Summary for Class: ParserConfig (org.apache.camel.component.protojson.config)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ParserConfig</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (8/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (17/17)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">ParserConfig$Builder</td>
+<td class="coverageStat">
+  <span class="percent">
+    76.9%
+  </span>
+  <span class="absValue">
+    (10/13)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    80.8%
+  </span>
+  <span class="absValue">
+    (21/26)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    85.7%
+  </span>
+  <span class="absValue">
+    (18/21)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    88.4%
+  </span>
+  <span class="absValue">
+    (38/43)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package org.apache.camel.component.protojson.config;
+&nbsp;
+&nbsp;
+&nbsp;import org.apache.camel.component.protojson.converter.JsonInMapConverter;
+&nbsp;import org.apache.camel.component.protojson.internal.registry.FieldConverterRegistry;
+&nbsp;import org.apache.camel.component.protojson.converter.JsonInFieldConverter;
+&nbsp;
+&nbsp;import java.util.ArrayList;
+&nbsp;import java.util.Collection;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;public final class ParserConfig {
+&nbsp;
+&nbsp;    private final boolean ignoringUnknownFields;
+&nbsp;    private final boolean acceptNumericEnums;
+&nbsp;    private final boolean allowNullForScalars;
+&nbsp;
+&nbsp;    // High-performance converter registry with O(1) lookup
+&nbsp;    private final FieldConverterRegistry&lt;JsonInFieldConverter&gt; inConverterRegistry;
+&nbsp;    private final FieldConverterRegistry&lt;JsonInMapConverter&gt; mapConverterRegistry;
+&nbsp;
+<b class="fc">&nbsp;    private ParserConfig(Builder b) {</b>
+<b class="fc">&nbsp;        this.ignoringUnknownFields = b.ignoringUnknownFields;</b>
+<b class="fc">&nbsp;        this.acceptNumericEnums = b.acceptNumericEnums;</b>
+<b class="fc">&nbsp;        this.allowNullForScalars = b.allowNullForScalars;</b>
+<b class="fc">&nbsp;        this.inConverterRegistry = b.buildConverterRegistry();</b>
+<b class="fc">&nbsp;        this.mapConverterRegistry  = b.buildMapConverterRegistry();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // getters
+<b class="fc">&nbsp;    public boolean isIgnoringUnknownFields()    { return ignoringUnknownFields; }</b>
+<b class="fc">&nbsp;    public boolean isAcceptNumericEnums()       { return acceptNumericEnums; }</b>
+<b class="fc">&nbsp;    public boolean isAllowNullForScalars()      { return allowNullForScalars; }</b>
+&nbsp;
+&nbsp;    public FieldConverterRegistry&lt;JsonInFieldConverter&gt; getInConverterRegistry() {
+<b class="fc">&nbsp;        return inConverterRegistry;</b>
+&nbsp;    }
+<b class="fc">&nbsp;    public FieldConverterRegistry&lt;JsonInMapConverter&gt; getMapConverterRegistry() {return mapConverterRegistry;}</b>
+&nbsp;
+&nbsp;
+&nbsp;    // Default config
+&nbsp;    public static ParserConfig defaultConfig() {
+<b class="fc">&nbsp;        return newBuilder()</b>
+<b class="fc">&nbsp;                .ignoringUnknownFields(false)</b>
+<b class="fc">&nbsp;                .acceptNumericEnums(true)</b>
+<b class="fc">&nbsp;                .allowNullForScalars(true)</b>
+<b class="fc">&nbsp;                .build();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Builder newBuilder() {
+<b class="fc">&nbsp;        return new Builder();</b>
+&nbsp;    }
+&nbsp;
+<b class="fc">&nbsp;    public static final class Builder {</b>
+&nbsp;
+&nbsp;        private boolean ignoringUnknownFields;
+&nbsp;        private boolean acceptNumericEnums;
+&nbsp;        private boolean allowNullForScalars;
+&nbsp;
+&nbsp;        // Converter list
+<b class="fc">&nbsp;        private final List&lt;JsonInFieldConverter&gt; inConverters = new ArrayList&lt;&gt;();</b>
+<b class="fc">&nbsp;        private final List&lt;JsonInMapConverter&gt; mapConverters = new ArrayList&lt;&gt;();</b>
+&nbsp;
+&nbsp;        // existing setters
+&nbsp;        public Builder ignoringUnknownFields(boolean v) {
+<b class="fc">&nbsp;            this.ignoringUnknownFields = v;</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder acceptNumericEnums(boolean v) {
+<b class="fc">&nbsp;            this.acceptNumericEnums = v;</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder allowNullForScalars(boolean v) {
+<b class="fc">&nbsp;            this.allowNullForScalars = v;</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Converter methods
+&nbsp;        public Builder addInConverter(JsonInFieldConverter c) {
+<b class="nc">&nbsp;            this.inConverters.add(c);</b>
+<b class="nc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder addAllInConverters(Collection&lt;JsonInFieldConverter&gt; cs) {
+<b class="fc">&nbsp;            this.inConverters.addAll(cs);</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder addMapConverter(JsonInMapConverter c) {
+<b class="nc">&nbsp;            this.mapConverters.add(c);</b>
+<b class="nc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder addAllMapConverters(Collection&lt;JsonInMapConverter&gt; cs) {
+<b class="fc">&nbsp;            this.mapConverters.addAll(cs);</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        private FieldConverterRegistry&lt;JsonInMapConverter&gt; buildMapConverterRegistry() {
+<b class="fc">&nbsp;            return FieldConverterRegistry.&lt;JsonInMapConverter&gt;newBuilder(</b>
+<b class="nc">&nbsp;                            (converter, field) -&gt; converter.supports(field)</b>
+&nbsp;                    )
+<b class="fc">&nbsp;                    .addAll(mapConverters)</b>
+<b class="fc">&nbsp;                    .build();</b>
+&nbsp;        }
+&nbsp;        // Build the high-performance registry
+&nbsp;        private FieldConverterRegistry&lt;JsonInFieldConverter&gt; buildConverterRegistry() {
+<b class="fc">&nbsp;            return FieldConverterRegistry.&lt;JsonInFieldConverter&gt;newBuilder(</b>
+<b class="fc">&nbsp;                            (converter, field) -&gt; converter.supports(field)</b>
+&nbsp;                    )
+<b class="fc">&nbsp;                    .addAll(inConverters)</b>
+<b class="fc">&nbsp;                    .build();</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public ParserConfig build() {
+<b class="fc">&nbsp;            return new ParserConfig(this);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-01-16 02:59</div>
+</div>
+</body>
+</html>
