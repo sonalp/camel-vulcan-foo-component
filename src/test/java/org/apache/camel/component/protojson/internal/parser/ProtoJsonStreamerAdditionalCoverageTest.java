@@ -9,8 +9,9 @@ import org.apache.camel.component.protojson.converter.JsonInFieldConverter;
 import org.apache.camel.component.protojson.converter.JsonInMapConverter;
 import org.apache.camel.component.protojson.engine.ProtoJsonException;
 import org.apache.camel.component.protojson.internal.registry.MetaRegistry;
-import org.apache.camel.component.protojson.test.proto.ComplexMessage;
 import org.apache.camel.component.protojson.test.proto.SimpleUser;
+import org.apache.camel.component.protojson.test.proto.UserWithMetadata;
+import org.apache.camel.component.protojson.test.proto.UserWithTags;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -85,7 +86,7 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             JsonInFieldConverter failingConverter = new JsonInFieldConverter() {
                 @Override
                 public boolean supports(Descriptors.FieldDescriptor field) {
-                    return field.isRepeated() && !field.isMapField();
+                    return field.isRepeated() && !field.isMapField() && field.getName().equals("tags");
                 }
 
                 @Override
@@ -102,7 +103,7 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             String json = "{\"name\":\"Test\",\"tags\":[\"tag1\"]}";
 
             // When/Then
-            assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, config))
+            assertThatThrownBy(() -> parseWithConfig(json, UserWithTags.class, config))
                     .isInstanceOf(ProtoJsonException.class)
                     .hasMessageContaining("Custom converter failed");
         }
@@ -130,10 +131,10 @@ class ProtoJsonStreamerAdditionalCoverageTest {
                     .addMapConverter(failingMapConverter)
                     .build();
 
-            String json = "{\"metadata\":{\"key1\":\"value1\"}}";
+            String json = "{\"string_meta\":{\"key1\":\"value1\"}}";
 
             // When/Then
-            assertThatThrownBy(() -> parseWithConfig(json, ComplexMessage.class, config))
+            assertThatThrownBy(() -> parseWithConfig(json, UserWithMetadata.class, config))
                     .isInstanceOf(ProtoJsonException.class)
                     .hasMessageContaining("Custom map converter failed");
         }
@@ -150,7 +151,7 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             JsonInMapConverter customConverter = new JsonInMapConverter() {
                 @Override
                 public boolean supports(Descriptors.FieldDescriptor mapField) {
-                    return mapField.getName().equals("metadata");
+                    return mapField.getName().equals("string_meta");
                 }
 
                 @Override
@@ -170,10 +171,10 @@ class ProtoJsonStreamerAdditionalCoverageTest {
                     .build();
 
             // JSON with null value in map
-            String json = "{\"metadata\":{\"key1\":null,\"key2\":\"value2\"}}";
+            String json = "{\"string_meta\":{\"key1\":null,\"key2\":\"value2\"}}";
 
             // When
-            ComplexMessage result = parseWithConfig(json, ComplexMessage.class, config);
+            UserWithMetadata result = parseWithConfig(json, UserWithMetadata.class, config);
 
             // Then: Should skip null and process key2
             assertThat(result).isNotNull();
@@ -188,7 +189,7 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             JsonInMapConverter customConverter = new JsonInMapConverter() {
                 @Override
                 public boolean supports(Descriptors.FieldDescriptor mapField) {
-                    return mapField.getName().equals("metadata");
+                    return mapField.getName().equals("string_meta");
                 }
 
                 @Override
@@ -206,10 +207,10 @@ class ProtoJsonStreamerAdditionalCoverageTest {
                     .addMapConverter(customConverter)
                     .build();
 
-            String json = "{\"metadata\":{\"testKey\":\"testValue\"}}";
+            String json = "{\"string_meta\":{\"testKey\":\"testValue\"}}";
 
             // When
-            ComplexMessage result = parseWithConfig(json, ComplexMessage.class, config);
+            UserWithMetadata result = parseWithConfig(json, UserWithMetadata.class, config);
 
             // Then: Custom converter should be called
             assertThat(converterCalled[0]).isTrue();
@@ -307,16 +308,16 @@ class ProtoJsonStreamerAdditionalCoverageTest {
                     .allowNullForScalars(true)
                     .build();
 
-            String json = "{\"metadata\":{\"key1\":null,\"key2\":\"value2\",\"key3\":null}}";
+            String json = "{\"string_meta\":{\"key1\":null,\"key2\":\"value2\",\"key3\":null}}";
 
             // When
-            ComplexMessage result = parseWithConfig(json, ComplexMessage.class, config);
+            UserWithMetadata result = parseWithConfig(json, UserWithMetadata.class, config);
 
             // Then: Should have only key2
-            assertThat(result.getMetadataMap()).hasSize(1);
-            assertThat(result.getMetadataMap()).containsEntry("key2", "value2");
-            assertThat(result.getMetadataMap()).doesNotContainKey("key1");
-            assertThat(result.getMetadataMap()).doesNotContainKey("key3");
+            assertThat(result.getStringMetaMap()).hasSize(1);
+            assertThat(result.getStringMetaMap()).containsEntry("key2", "value2");
+            assertThat(result.getStringMetaMap()).doesNotContainKey("key1");
+            assertThat(result.getStringMetaMap()).doesNotContainKey("key3");
         }
 
         @Test
@@ -327,16 +328,16 @@ class ProtoJsonStreamerAdditionalCoverageTest {
                     .allowNullForScalars(true)
                     .build();
 
-            String json = "{\"metadata\":{\"a\":\"val1\",\"b\":null,\"c\":\"val2\",\"d\":null,\"e\":\"val3\"}}";
+            String json = "{\"string_meta\":{\"a\":\"val1\",\"b\":null,\"c\":\"val2\",\"d\":null,\"e\":\"val3\"}}";
 
             // When
-            ComplexMessage result = parseWithConfig(json, ComplexMessage.class, config);
+            UserWithMetadata result = parseWithConfig(json, UserWithMetadata.class, config);
 
             // Then
-            assertThat(result.getMetadataMap()).hasSize(3);
-            assertThat(result.getMetadataMap()).containsEntry("a", "val1");
-            assertThat(result.getMetadataMap()).containsEntry("c", "val2");
-            assertThat(result.getMetadataMap()).containsEntry("e", "val3");
+            assertThat(result.getStringMetaMap()).hasSize(3);
+            assertThat(result.getStringMetaMap()).containsEntry("a", "val1");
+            assertThat(result.getStringMetaMap()).containsEntry("c", "val2");
+            assertThat(result.getStringMetaMap()).containsEntry("e", "val3");
         }
 
         @Test
@@ -347,13 +348,13 @@ class ProtoJsonStreamerAdditionalCoverageTest {
                     .allowNullForScalars(true)
                     .build();
 
-            String json = "{\"metadata\":{\"key1\":null,\"key2\":null,\"key3\":null}}";
+            String json = "{\"string_meta\":{\"key1\":null,\"key2\":null,\"key3\":null}}";
 
             // When
-            ComplexMessage result = parseWithConfig(json, ComplexMessage.class, config);
+            UserWithMetadata result = parseWithConfig(json, UserWithMetadata.class, config);
 
             // Then: Map should be empty
-            assertThat(result.getMetadataMap()).isEmpty();
+            assertThat(result.getStringMetaMap()).isEmpty();
         }
     }
 
