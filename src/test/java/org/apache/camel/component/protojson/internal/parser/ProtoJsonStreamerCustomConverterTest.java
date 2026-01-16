@@ -306,9 +306,9 @@ class ProtoJsonStreamerCustomConverterTest {
     class MapNullHandlingTests {
 
         @Test
-        @DisplayName("Should skip null values in map when allowNullForScalars is true")
+        @DisplayName("Should skip null values in map when allowNullForScalars is true - standard path")
         void testMapNullValueSkipped() throws Exception {
-            // Given
+            // Given: No custom converter, uses standard path
             ParserConfig config = ParserConfig.newBuilder()
                     .allowNullForScalars(true)
                     .build();
@@ -318,11 +318,45 @@ class ProtoJsonStreamerCustomConverterTest {
             // When
             UserWithMetadata result = parseWithConfig(json, UserWithMetadata.class, config);
 
-            // Then: Should have only key2
+            // Then: Should have only key2 (covers line 203-204)
             assertThat(result.getStringMetaMap()).hasSize(1);
             assertThat(result.getStringMetaMap()).containsEntry("key2", "value2");
             assertThat(result.getStringMetaMap()).doesNotContainKey("key1");
             assertThat(result.getStringMetaMap()).doesNotContainKey("key3");
+        }
+
+        @Test
+        @DisplayName("Should skip null values in map with custom converter - custom path")
+        void testMapNullValueWithCustomConverterPath() throws Exception {
+            // Given: Custom converter to use custom path
+            JsonInMapConverter customConverter = new JsonInMapConverter() {
+                @Override
+                public boolean supports(Descriptors.FieldDescriptor mapField) {
+                    return mapField.getName().equals("string_meta");
+                }
+
+                @Override
+                public Object readValue(JsonParser parser,
+                                      Descriptors.FieldDescriptor mapField,
+                                      Descriptors.FieldDescriptor valueField,
+                                      Object key) throws IOException {
+                    return "custom_" + parser.getText();
+                }
+            };
+
+            ParserConfig config = ParserConfig.newBuilder()
+                    .allowNullForScalars(true)
+                    .addMapConverter(customConverter)
+                    .build();
+
+            String json = "{\"string_meta\":{\"key1\":null,\"key2\":\"value2\",\"key3\":null}}";
+
+            // When
+            UserWithMetadata result = parseWithConfig(json, UserWithMetadata.class, config);
+
+            // Then: Should skip nulls in custom converter path (covers line 233-234)
+            assertThat(result.getStringMetaMap()).hasSize(1);
+            assertThat(result.getStringMetaMap()).containsEntry("key2", "custom_value2");
         }
 
         @Test
@@ -360,6 +394,72 @@ class ProtoJsonStreamerCustomConverterTest {
 
             // Then: Map should be empty
             assertThat(result.getStringMetaMap()).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("Map Key Conversion Error Tests")
+    class MapKeyConversionErrorTests {
+
+        @Test
+        @DisplayName("Should throw error for invalid int32 map key")
+        void testInvalidIntMapKey() {
+            // Given: int_key_meta uses int32 keys
+            String json = "{\"int_key_meta\":{\"not-a-number\":\"value\"}}";
+
+            // When/Then: Should throw ProtoJsonException (covers convertMapKey line 356-360)
+            assertThatThrownBy(() -> parseWithConfig(json, UserWithMetadata.class, ParserConfig.defaultConfig()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Parse failed");
+        }
+
+        @Test
+        @DisplayName("Should throw error for overflow int32 map key")
+        void testOverflowIntMapKey() {
+            // Given: Number too large for int32
+            String json = "{\"int_key_meta\":{\"999999999999999\":\"value\"}}";
+
+            // When/Then: Should throw error
+            assertThatThrownBy(() -> parseWithConfig(json, UserWithMetadata.class, ParserConfig.defaultConfig()))
+                    .isInstanceOf(RuntimeException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("Type Mismatch Tests")
+    class TypeMismatchTests {
+
+        @Test
+        @DisplayName("Should throw error for object value on string field")
+        void testObjectForStringField() {
+            // Given: Object instead of string
+            String json = "{\"name\":{\"nested\":\"value\"},\"age\":30}";
+
+            // When/Then: Should throw type mismatch (covers parseValue line 263)
+            assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, ParserConfig.defaultConfig()))
+                    .isInstanceOf(RuntimeException.class);
+        }
+
+        @Test
+        @DisplayName("Should throw error for non-numeric int field")
+        void testNonNumericForIntField() {
+            // Given: Object for int field
+            String json = "{\"name\":\"Test\",\"age\":{}}";
+
+            // When/Then: Should throw type mismatch (covers parseValue line 269)
+            assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, ParserConfig.defaultConfig()))
+                    .isInstanceOf(RuntimeException.class);
+        }
+
+        @Test
+        @DisplayName("Should throw error for array value on scalar field")
+        void testArrayForScalarField() {
+            // Given: Array for string field
+            String json = "{\"name\":[\"a\",\"b\"],\"age\":30}";
+
+            // When/Then: Should throw error
+            assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, ParserConfig.defaultConfig()))
+                    .isInstanceOf(RuntimeException.class);
         }
     }
 
