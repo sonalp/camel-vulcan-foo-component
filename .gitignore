@@ -1,2 +1,80 @@
 # Project exclude paths
-/target/
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# IntelliJ output
+out/
+
+### Java ###
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Java crash logs
+hs_err_pid*
+replay_pid*
+
+### Maven ###
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+### Gradle ###
+.gradle/
+build/
+!gradle-wrapper.jar
+gradle-app.setting
+
+# Local properties
+gradle.properties
+
+### Protobuf (protoc generated) ###
+# Maven default generated dirs
+target/generated-sources/
+target/generated-test-sources/
+
+# Gradle default generated dirs
+build/generated/
+
+### IntelliJ + Maven/Gradle Annotation Processing ###
+**/generated/
+**/generated-sources/
+**/generated-test-sources/
+
+### OS-specific ###
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+### Others ###
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Unit test reports
+surefire-reports/
+failsafe-reports/
+
+# Coverage tools
+jacoco.exec
+coverage/
+.idea/coverage/
+
+# Local environment config
+.env
+*.local

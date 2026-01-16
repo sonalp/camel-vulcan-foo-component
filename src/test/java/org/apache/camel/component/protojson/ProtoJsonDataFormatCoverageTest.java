@@ -1,9 +1,14 @@
 package org.apache.camel.component.protojson;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.Exchange;
+import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.protojson.converter.JsonInFieldConverter;
 import org.apache.camel.component.protojson.converter.JsonInMapConverter;
@@ -20,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -410,7 +416,7 @@ class ProtoJsonDataFormatCoverageTest extends BaseProtoJsonTest {
 
             // When/Then
             assertThatThrownBy(() -> format.unmarshal(exchange, in))
-                    .isInstanceOf(CamelExecutionException.class)
+                    .isInstanceOf(RuntimeCamelException.class)
                     .hasMessageContaining("Cannot resolve Protobuf Message class");
 
             format.stop();
@@ -431,7 +437,7 @@ class ProtoJsonDataFormatCoverageTest extends BaseProtoJsonTest {
 
             // When/Then
             assertThatThrownBy(() -> format.unmarshal(exchange, in))
-                    .isInstanceOf(CamelExecutionException.class)
+                    .isInstanceOf(RuntimeCamelException.class)
                     .hasMessageContaining("is not a Protobuf Message type");
 
             format.stop();
@@ -451,7 +457,7 @@ class ProtoJsonDataFormatCoverageTest extends BaseProtoJsonTest {
 
             // When/Then
             assertThatThrownBy(() -> format.unmarshal(exchange, in))
-                    .isInstanceOf(CamelExecutionException.class)
+                    .isInstanceOf(RuntimeCamelException.class)
                     .hasMessageContaining("ProtoJsonDataFormat requires instanceClass/instanceClassName");
 
             format.stop();
@@ -461,42 +467,43 @@ class ProtoJsonDataFormatCoverageTest extends BaseProtoJsonTest {
     // Test helper classes
 
     private static class TestInFieldConverter implements JsonInFieldConverter {
+
         @Override
-        public boolean canConvert(String fieldName, com.google.protobuf.Descriptors.FieldDescriptor.Type fieldType) {
+        public boolean supports(Descriptors.FieldDescriptor field) {
             return false;
         }
 
         @Override
-        public Object convert(com.fasterxml.jackson.core.JsonParser parser,
-                            com.google.protobuf.Descriptors.FieldDescriptor.Type fieldType) {
-            return null;
+        public void read(JsonParser parser, Message.Builder builder,
+                Descriptors.FieldDescriptor field) throws IOException {
+
         }
     }
 
     private static class TestInMapConverter implements JsonInMapConverter {
+
         @Override
-        public boolean canConvert(String fieldName,
-                                com.google.protobuf.Descriptors.FieldDescriptor.Type keyType,
-                                com.google.protobuf.Descriptors.FieldDescriptor.Type valueType) {
+        public boolean supports(Descriptors.FieldDescriptor mapField) {
             return false;
         }
 
         @Override
-        public void convert(com.fasterxml.jackson.core.JsonParser parser,
-                          com.google.protobuf.Descriptors.FieldDescriptor.Type keyType,
-                          com.google.protobuf.Descriptors.FieldDescriptor.Type valueType,
-                          java.util.function.BiConsumer<Object, Object> consumer) throws Exception {
+        public Object readValue(JsonParser parser, Descriptors.FieldDescriptor mapField,
+                Descriptors.FieldDescriptor valueField, Object key) throws IOException {
+            return null;
         }
     }
 
     private static class TestOutFieldConverter implements JsonOutFieldConverter {
+
         @Override
-        public boolean canConvert(String fieldName, Object value) {
+        public boolean supports(Descriptors.FieldDescriptor field) {
             return false;
         }
 
         @Override
-        public void convert(Object value, com.fasterxml.jackson.core.JsonGenerator generator) throws Exception {
+        public void write(JsonGenerator gen, Message message, Descriptors.FieldDescriptor field) throws IOException {
+
         }
     }
 }
