@@ -228,7 +228,7 @@ class ProtoJsonStreamerCustomConverterTest {
     class SkipChildrenTests {
 
         @Test
-        @DisplayName("Should skip unknown fields when configured")
+        @DisplayName("Should skip unknown fields when configured - covers line 51-52")
         void testSkipUnknownFields() throws Exception {
             // Given: Config to ignore unknown fields
             ParserConfig config = ParserConfig.newBuilder()
@@ -240,13 +240,13 @@ class ProtoJsonStreamerCustomConverterTest {
             // When
             SimpleUser result = parseWithConfig(json, SimpleUser.class, config);
 
-            // Then: Should parse known fields and skip unknown
+            // Then: Should parse known fields and skip unknown (line 61-62 skipChildren)
             assertThat(result.getName()).isEqualTo("Test");
             assertThat(result.getAge()).isEqualTo(30);
         }
 
         @Test
-        @DisplayName("Should skip children for unknown nested objects")
+        @DisplayName("Should skip children for unknown nested objects - covers line 51-52")
         void testSkipUnknownNestedObject() throws Exception {
             // Given
             ParserConfig config = ParserConfig.newBuilder()
@@ -258,13 +258,13 @@ class ProtoJsonStreamerCustomConverterTest {
             // When
             SimpleUser result = parseWithConfig(json, SimpleUser.class, config);
 
-            // Then: Should skip entire nested object
+            // Then: Should skip entire nested object (triggers skipChildren for nested content)
             assertThat(result.getName()).isEqualTo("Test");
             assertThat(result.getAge()).isEqualTo(25);
         }
 
         @Test
-        @DisplayName("Should skip children for unknown arrays")
+        @DisplayName("Should skip children for unknown arrays - covers line 51-52")
         void testSkipUnknownArray() throws Exception {
             // Given
             ParserConfig config = ParserConfig.newBuilder()
@@ -276,26 +276,25 @@ class ProtoJsonStreamerCustomConverterTest {
             // When
             SimpleUser result = parseWithConfig(json, SimpleUser.class, config);
 
-            // Then
+            // Then: Should skip array content
             assertThat(result.getName()).isEqualTo("Test");
             assertThat(result.getAge()).isEqualTo(25);
         }
 
         @Test
-        @DisplayName("Should skip non-field-name tokens in object")
-        void testSkipNonFieldNameTokens() throws Exception {
-            // This test covers the skipChildren when token is not FIELD_NAME
-            // Hard to trigger with normal JSON, but we test with ignore unknown fields
+        @DisplayName("Should skip deeply nested unknown structures")
+        void testSkipDeeplyNestedUnknown() throws Exception {
+            // Given: Deeply nested unknown field
             ParserConfig config = ParserConfig.newBuilder()
                     .ignoringUnknownFields(true)
                     .build();
 
-            String json = "{\"name\":\"Test\",\"unknown\":123,\"age\":30}";
+            String json = "{\"name\":\"Test\",\"unknown\":{\"nested\":{\"deep\":[1,{\"x\":2}]}},\"age\":30}";
 
             // When
             SimpleUser result = parseWithConfig(json, SimpleUser.class, config);
 
-            // Then
+            // Then: Should skip all nested content
             assertThat(result.getName()).isEqualTo("Test");
             assertThat(result.getAge()).isEqualTo(30);
         }
