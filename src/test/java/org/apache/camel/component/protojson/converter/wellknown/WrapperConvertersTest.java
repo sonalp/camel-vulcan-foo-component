@@ -388,4 +388,351 @@ class WrapperConvertersTest {
         String json = baos.toString(StandardCharsets.UTF_8);
         assertThat(json).contains("2.718281828459045");
     }
+
+    // ==================== BoolValue Tests ====================
+
+    @Test
+    void testBoolValueReadTrue() throws Exception {
+        // Given: Test VALUE_TRUE branch (line 93-94)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "true";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, boolValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalBool()).isTrue();
+        assertThat(event.getOptionalBool().getValue()).isTrue();
+    }
+
+    @Test
+    void testBoolValueReadFalse() throws Exception {
+        // Given: Test VALUE_FALSE branch (line 95-96)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "false";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, boolValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalBool()).isTrue();
+        assertThat(event.getOptionalBool().getValue()).isFalse();
+    }
+
+    @Test
+    void testBoolValueReadFromString() throws Exception {
+        // Given: Test isScalarValue branch (line 97-98)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"true\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, boolValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalBool()).isTrue();
+        assertThat(event.getOptionalBool().getValue()).isTrue();
+    }
+
+    @Test
+    void testBoolValueWrite() throws Exception {
+        // Given: Test bool write branch (line 172)
+        WrapperConverters converter = new WrapperConverters();
+        BoolValue value = BoolValue.of(true);
+
+        EventMessage message = EventMessage.newBuilder()
+                .setOptionalBool(value)
+                .build();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // When
+        try (JsonGenerator gen = jsonFactory.createGenerator(baos)) {
+            converter.write(gen, message, boolValueField);
+            gen.flush();
+        }
+
+        // Then
+        String json = baos.toString(StandardCharsets.UTF_8);
+        assertThat(json).isEqualTo("true");
+    }
+
+    // ==================== BytesValue Tests ====================
+
+    @Test
+    void testBytesValueRead() throws Exception {
+        // Given: Test BytesValue branch (line 86-89)
+        WrapperConverters converter = new WrapperConverters();
+        String base64 = java.util.Base64.getEncoder().encodeToString("Hello World".getBytes());
+        String json = "\"" + base64 + "\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, bytesValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalBytes()).isTrue();
+        assertThat(event.getOptionalBytes().getValue().toStringUtf8()).isEqualTo("Hello World");
+    }
+
+    @Test
+    void testBytesValueWrite() throws Exception {
+        // Given: Test BytesValue write branch (line 168-171)
+        WrapperConverters converter = new WrapperConverters();
+        BytesValue value = BytesValue.of(ByteString.copyFromUtf8("Hello World"));
+
+        EventMessage message = EventMessage.newBuilder()
+                .setOptionalBytes(value)
+                .build();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // When
+        try (JsonGenerator gen = jsonFactory.createGenerator(baos)) {
+            converter.write(gen, message, bytesValueField);
+            gen.flush();
+        }
+
+        // Then
+        String json = baos.toString(StandardCharsets.UTF_8);
+        String expectedBase64 = java.util.Base64.getEncoder().encodeToString("Hello World".getBytes());
+        assertThat(json).isEqualTo("\"" + expectedBase64 + "\"");
+    }
+
+    // ==================== String-to-Numeric Conversion Tests ====================
+
+    @Test
+    void testInt32ValueReadFromString() throws Exception {
+        // Given: Test isScalarValue branch for Int32Value (line 105-106)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"123\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, int32ValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalCount()).isTrue();
+        assertThat(event.getOptionalCount().getValue()).isEqualTo(123);
+    }
+
+    @Test
+    void testInt64ValueReadFromString() throws Exception {
+        // Given: Test isScalarValue branch for Int64Value (line 113-114)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"9223372036854775807\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, int64ValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalLong()).isTrue();
+        assertThat(event.getOptionalLong().getValue()).isEqualTo(9223372036854775807L);
+    }
+
+    @Test
+    void testUInt32ValueReadFromString() throws Exception {
+        // Given: Test isScalarValue branch for UInt32Value (line 121-122)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"4294967295\""; // Max unsigned int32
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, uint32ValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalUint()).isTrue();
+        // Note: Proto stores as signed int, so -1 represents max unsigned
+        assertThat(event.getOptionalUint().getValue()).isEqualTo(-1);
+    }
+
+    @Test
+    void testUInt64ValueReadFromString() throws Exception {
+        // Given: Test isScalarValue branch for UInt64Value (line 129-130)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"1000000\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, uint64ValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalUlong()).isTrue();
+        assertThat(event.getOptionalUlong().getValue()).isEqualTo(1000000L);
+    }
+
+    @Test
+    void testFloatValueReadFromString() throws Exception {
+        // Given: Test isScalarValue branch for FloatValue (line 137-138)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"3.14\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, floatValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalFloat()).isTrue();
+        assertThat(event.getOptionalFloat().getValue()).isCloseTo(3.14f, within(0.01f));
+    }
+
+    @Test
+    void testDoubleValueReadFromString() throws Exception {
+        // Given: Test isScalarValue branch for DoubleValue (line 145-146)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "\"2.718\"";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            converter.read(parser, builder, doubleValueField);
+        }
+
+        // Then
+        EventMessage event = builder.build();
+        assertThat(event.hasOptionalDouble()).isTrue();
+        assertThat(event.getOptionalDouble().getValue()).isCloseTo(2.718, within(0.001));
+    }
+
+    // ==================== Error Case Tests ====================
+
+    @Test
+    void testStringValueReadInvalidToken() throws Exception {
+        // Given: Object for StringValue (line 80-83)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "{\"nested\":\"object\"}";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When/Then: Should throw IOException
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            assertThat(org.assertj.core.api.Assertions.catchThrowable(() ->
+                    converter.read(parser, builder, stringValueField)))
+                    .isInstanceOf(IOException.class)
+                    .hasMessageContaining("Expected string for StringValue");
+        }
+    }
+
+    @Test
+    void testBytesValueReadInvalidToken() throws Exception {
+        // Given: Non-string for BytesValue (line 86-90)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "123";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When/Then: Should throw IOException
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            assertThat(org.assertj.core.api.Assertions.catchThrowable(() ->
+                    converter.read(parser, builder, bytesValueField)))
+                    .isInstanceOf(IOException.class)
+                    .hasMessageContaining("Expected base64 string for BytesValue");
+        }
+    }
+
+    @Test
+    void testBoolValueReadInvalidToken() throws Exception {
+        // Given: Object for BoolValue (line 100)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "{\"nested\":\"object\"}";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When/Then: Should throw IOException
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            assertThat(org.assertj.core.api.Assertions.catchThrowable(() ->
+                    converter.read(parser, builder, boolValueField)))
+                    .isInstanceOf(IOException.class)
+                    .hasMessageContaining("Expected boolean for BoolValue");
+        }
+    }
+
+    @Test
+    void testInt32ValueReadInvalidToken() throws Exception {
+        // Given: Object for Int32Value (line 108)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "{}";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When/Then: Should throw IOException
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            assertThat(org.assertj.core.api.Assertions.catchThrowable(() ->
+                    converter.read(parser, builder, int32ValueField)))
+                    .isInstanceOf(IOException.class)
+                    .hasMessageContaining("Expected integer for Int32Value");
+        }
+    }
+
+    @Test
+    void testFloatValueReadInvalidToken() throws Exception {
+        // Given: Array for FloatValue (line 140)
+        WrapperConverters converter = new WrapperConverters();
+        String json = "[1,2,3]";
+
+        EventMessage.Builder builder = EventMessage.newBuilder();
+
+        // When/Then: Should throw IOException
+        try (JsonParser parser = jsonFactory.createParser(json.getBytes())) {
+            parser.nextToken();
+            assertThat(org.assertj.core.api.Assertions.catchThrowable(() ->
+                    converter.read(parser, builder, floatValueField)))
+                    .isInstanceOf(IOException.class)
+                    .hasMessageContaining("Expected float for FloatValue");
+        }
+    }
 }
