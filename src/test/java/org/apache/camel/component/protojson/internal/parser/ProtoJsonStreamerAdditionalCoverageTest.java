@@ -363,10 +363,14 @@ class ProtoJsonStreamerAdditionalCoverageTest {
     private <T extends Message> T parseWithConfig(
             String json, Class<T> messageClass, ParserConfig config) throws Exception {
 
+        // Register message type with MetaRegistry
+        metaRegistry.register(messageClass);
+
+        // Create context with correct parameter order: (config, converterRegistry, metaRegistry)
         JsonToProtoContext ctx = new JsonToProtoContext(
-                metaRegistry,
                 config,
-                converterRegistry
+                converterRegistry,
+                metaRegistry
         );
 
         try (JsonParser parser = jsonFactory.createParser(
