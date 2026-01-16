@@ -24,15 +24,15 @@ import java.nio.charset.StandardCharsets;
 import static org.assertj.core.api.Assertions.*;
 
 /**
- * Additional coverage tests for ProtoJsonStreamer to increase line coverage from 62.8% to 80%+
- * Focuses on uncovered branches:
- * - skipChildren() calls for malformed tokens
- * - Custom converter exception handling
- * - Map field edge cases with custom converters
- * - Null handling in various scenarios
+ * Tests for ProtoJsonStreamer custom converter functionality and error handling.
+ * Focuses on:
+ * - Custom field converter exception handling
+ * - Custom map converter behavior and edge cases
+ * - SkipChildren() calls for unknown/malformed fields
+ * - Null value handling in maps with custom converters
  */
-@DisplayName("ProtoJsonStreamer Additional Coverage Tests")
-class ProtoJsonStreamerAdditionalCoverageTest {
+@DisplayName("ProtoJsonStreamer Custom Converter Tests")
+class ProtoJsonStreamerCustomConverterTest {
 
     private JsonFactory jsonFactory;
     private MetaRegistry metaRegistry;
