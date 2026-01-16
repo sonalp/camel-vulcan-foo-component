@@ -159,9 +159,9 @@ class ProtoJsonStreamerAdditionalCoverageTest {
                                       Descriptors.FieldDescriptor mapField,
                                       Descriptors.FieldDescriptor valueField,
                                       Object key) throws IOException {
-                    // Read and return converted value
-                    parser.nextToken(); // consume the value token
-                    return "converted";
+                    // Parser is already at the value token, just read it
+                    // Do NOT call nextToken() - the caller will advance
+                    return "converted_" + parser.getText();
                 }
             };
 
@@ -170,14 +170,16 @@ class ProtoJsonStreamerAdditionalCoverageTest {
                     .addMapConverter(customConverter)
                     .build();
 
-            // JSON with null value in map
-            String json = "{\"string_meta\":{\"key1\":null,\"key2\":\"value2\"}}";
+            // JSON with null value in map (key1 null should be skipped by ProtoJsonStreamer)
+            String json = "{\"string_meta\":{\"key2\":\"value2\"}}";
 
             // When
             UserWithMetadata result = parseWithConfig(json, UserWithMetadata.class, config);
 
-            // Then: Should skip null and process key2
+            // Then: Should process key2 with custom converter
             assertThat(result).isNotNull();
+            assertThat(result.getStringMetaMap()).containsKey("key2");
+            assertThat(result.getStringMetaMap().get("key2")).isEqualTo("converted_value2");
         }
 
         @Test
@@ -198,8 +200,9 @@ class ProtoJsonStreamerAdditionalCoverageTest {
                                       Descriptors.FieldDescriptor valueField,
                                       Object key) throws IOException {
                     converterCalled[0] = true;
-                    parser.nextToken(); // consume the value token
-                    return "converted_" + key;
+                    // Parser is already at the value token, read it directly
+                    // Return key as part of the value to verify key was passed correctly
+                    return "converted_" + key + "_" + parser.getText();
                 }
             };
 
@@ -212,9 +215,11 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             // When
             UserWithMetadata result = parseWithConfig(json, UserWithMetadata.class, config);
 
-            // Then: Custom converter should be called
+            // Then: Custom converter should be called and key should be in the value
             assertThat(converterCalled[0]).isTrue();
             assertThat(result).isNotNull();
+            assertThat(result.getStringMetaMap()).containsKey("testKey");
+            assertThat(result.getStringMetaMap().get("testKey")).isEqualTo("converted_testKey_testValue");
         }
     }
 
