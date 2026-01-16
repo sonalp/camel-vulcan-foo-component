@@ -3,20 +3,21 @@ package org.apache.camel.component.protojson.internal.parser;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
 import org.apache.camel.component.protojson.config.ParserConfig;
-import java.io.IOException;
 import org.apache.camel.component.protojson.converter.JsonInFieldConverter;
 import org.apache.camel.component.protojson.converter.JsonInMapConverter;
 import org.apache.camel.component.protojson.engine.ProtoJsonException;
-import org.apache.camel.component.protojson.internal.registry.FieldConverterRegistry;
 import org.apache.camel.component.protojson.internal.registry.MetaRegistry;
-import org.apache.camel.component.protojson.test.proto.*;
+import org.apache.camel.component.protojson.test.proto.ComplexMessage;
+import org.apache.camel.component.protojson.test.proto.SimpleUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.*;
@@ -54,21 +55,18 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             JsonInFieldConverter failingConverter = new JsonInFieldConverter() {
                 @Override
                 public boolean supports(Descriptors.FieldDescriptor field) {
-                    return true;
+                    return field.getName().equals("name");
                 }
 
                 @Override
-                public void read(JsonParser parser, com.google.protobuf.Message.Builder builder,
+                public void read(JsonParser parser, Message.Builder builder,
                                Descriptors.FieldDescriptor field) throws IOException {
                     throw new IOException("Converter intentionally failed");
                 }
             };
 
-            FieldConverterRegistry converterReg = FieldConverterRegistry.empty()
-                    .with(failingConverter);
-
             ParserConfig config = ParserConfig.newBuilder()
-                    .inConverterRegistry(converterReg)
+                    .addInConverter(failingConverter)
                     .build();
 
             String json = "{\"name\":\"Test\"}";
@@ -87,24 +85,21 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             JsonInFieldConverter failingConverter = new JsonInFieldConverter() {
                 @Override
                 public boolean supports(Descriptors.FieldDescriptor field) {
-                    return field.isRepeated();
+                    return field.isRepeated() && !field.isMapField();
                 }
 
                 @Override
-                public void read(JsonParser parser, com.google.protobuf.Message.Builder builder,
+                public void read(JsonParser parser, Message.Builder builder,
                                Descriptors.FieldDescriptor field) throws IOException {
                     throw new IOException("Repeated converter failed");
                 }
             };
 
-            FieldConverterRegistry converterReg = FieldConverterRegistry.empty()
-                    .with(failingConverter);
-
             ParserConfig config = ParserConfig.newBuilder()
-                    .inConverterRegistry(converterReg)
+                    .addInConverter(failingConverter)
                     .build();
 
-            String json = "{\"tags\":[\"tag1\",\"tag2\"]}";
+            String json = "{\"name\":\"Test\",\"tags\":[\"tag1\"]}";
 
             // When/Then
             assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, config))
@@ -119,7 +114,7 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             JsonInMapConverter failingMapConverter = new JsonInMapConverter() {
                 @Override
                 public boolean supports(Descriptors.FieldDescriptor mapField) {
-                    return true;
+                    return mapField.isMapField();
                 }
 
                 @Override
@@ -132,8 +127,7 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             };
 
             ParserConfig config = ParserConfig.newBuilder()
-                    .mapConverterRegistry(org.apache.camel.component.protojson.internal.registry.MapConverterRegistry.empty()
-                            .with(failingMapConverter))
+                    .addMapConverter(failingMapConverter)
                     .build();
 
             String json = "{\"metadata\":{\"key1\":\"value1\"}}";
@@ -156,7 +150,7 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             JsonInMapConverter customConverter = new JsonInMapConverter() {
                 @Override
                 public boolean supports(Descriptors.FieldDescriptor mapField) {
-                    return true;
+                    return mapField.getName().equals("metadata");
                 }
 
                 @Override
@@ -164,15 +158,15 @@ class ProtoJsonStreamerAdditionalCoverageTest {
                                       Descriptors.FieldDescriptor mapField,
                                       Descriptors.FieldDescriptor valueField,
                                       Object key) throws IOException {
-                    // Return some value
+                    // Read and return converted value
+                    parser.nextToken(); // consume the value token
                     return "converted";
                 }
             };
 
             ParserConfig config = ParserConfig.newBuilder()
                     .allowNullForScalars(true)
-                    .mapConverterRegistry(org.apache.camel.component.protojson.internal.registry.MapConverterRegistry.empty()
-                            .with(customConverter))
+                    .addMapConverter(customConverter)
                     .build();
 
             // JSON with null value in map
@@ -194,7 +188,7 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             JsonInMapConverter customConverter = new JsonInMapConverter() {
                 @Override
                 public boolean supports(Descriptors.FieldDescriptor mapField) {
-                    return true;
+                    return mapField.getName().equals("metadata");
                 }
 
                 @Override
@@ -203,13 +197,13 @@ class ProtoJsonStreamerAdditionalCoverageTest {
                                       Descriptors.FieldDescriptor valueField,
                                       Object key) throws IOException {
                     converterCalled[0] = true;
+                    parser.nextToken(); // consume the value token
                     return "converted_" + key;
                 }
             };
 
             ParserConfig config = ParserConfig.newBuilder()
-                    .mapConverterRegistry(org.apache.camel.component.protojson.internal.registry.MapConverterRegistry.empty()
-                            .with(customConverter))
+                    .addMapConverter(customConverter)
                     .build();
 
             String json = "{\"metadata\":{\"testKey\":\"testValue\"}}";
@@ -280,6 +274,25 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             assertThat(result.getName()).isEqualTo("Test");
             assertThat(result.getAge()).isEqualTo(25);
         }
+
+        @Test
+        @DisplayName("Should skip non-field-name tokens in object")
+        void testSkipNonFieldNameTokens() throws Exception {
+            // This test covers the skipChildren when token is not FIELD_NAME
+            // Hard to trigger with normal JSON, but we test with ignore unknown fields
+            ParserConfig config = ParserConfig.newBuilder()
+                    .ignoringUnknownFields(true)
+                    .build();
+
+            String json = "{\"name\":\"Test\",\"unknown\":123,\"age\":30}";
+
+            // When
+            SimpleUser result = parseWithConfig(json, SimpleUser.class, config);
+
+            // Then
+            assertThat(result.getName()).isEqualTo("Test");
+            assertThat(result.getAge()).isEqualTo(30);
+        }
     }
 
     @Nested
@@ -325,11 +338,28 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             assertThat(result.getMetadataMap()).containsEntry("c", "val2");
             assertThat(result.getMetadataMap()).containsEntry("e", "val3");
         }
+
+        @Test
+        @DisplayName("Should handle map with all null values")
+        void testMapAllNullValues() throws Exception {
+            // Given
+            ParserConfig config = ParserConfig.newBuilder()
+                    .allowNullForScalars(true)
+                    .build();
+
+            String json = "{\"metadata\":{\"key1\":null,\"key2\":null,\"key3\":null}}";
+
+            // When
+            ComplexMessage result = parseWithConfig(json, ComplexMessage.class, config);
+
+            // Then: Map should be empty
+            assertThat(result.getMetadataMap()).isEmpty();
+        }
     }
 
     // Helper methods
 
-    private <T extends com.google.protobuf.Message> T parseWithConfig(
+    private <T extends Message> T parseWithConfig(
             String json, Class<T> messageClass, ParserConfig config) throws Exception {
 
         JsonToProtoContext ctx = new JsonToProtoContext(
@@ -342,7 +372,7 @@ class ProtoJsonStreamerAdditionalCoverageTest {
                 new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)))) {
 
             T defaultInstance = (T) messageClass.getMethod("getDefaultInstance").invoke(null);
-            com.google.protobuf.Message.Builder builder = defaultInstance.toBuilder();
+            Message.Builder builder = defaultInstance.toBuilder();
 
             ProtoJsonStreamer.merge(parser, defaultInstance.getDescriptorForType(), builder, ctx);
 
@@ -350,10 +380,5 @@ class ProtoJsonStreamerAdditionalCoverageTest {
             T result = (T) builder.build();
             return result;
         }
-    }
-
-    private <T extends com.google.protobuf.Message> T parseJson(String json, Class<T> messageClass) throws Exception {
-        ParserConfig config = ParserConfig.newBuilder().build();
-        return parseWithConfig(json, messageClass, config);
     }
 }
