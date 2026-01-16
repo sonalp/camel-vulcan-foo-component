@@ -429,25 +429,27 @@ class ProtoJsonStreamerCustomConverterTest {
     class TypeMismatchTests {
 
         @Test
-        @DisplayName("Should throw error for object value on string field")
+        @DisplayName("Should throw error for object value on string field - line 263")
         void testObjectForStringField() {
             // Given: Object instead of string
             String json = "{\"name\":{\"nested\":\"value\"},\"age\":30}";
 
             // When/Then: Should throw type mismatch (covers parseValue line 263)
             assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, ParserConfig.defaultConfig()))
-                    .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Parse failed");
         }
 
         @Test
-        @DisplayName("Should throw error for non-numeric int field")
+        @DisplayName("Should throw error for non-numeric int field - line 269")
         void testNonNumericForIntField() {
             // Given: Object for int field
             String json = "{\"name\":\"Test\",\"age\":{}}";
 
             // When/Then: Should throw type mismatch (covers parseValue line 269)
             assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, ParserConfig.defaultConfig()))
-                    .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Parse failed");
         }
 
         @Test
@@ -457,6 +459,17 @@ class ProtoJsonStreamerCustomConverterTest {
             String json = "{\"name\":[\"a\",\"b\"],\"age\":30}";
 
             // When/Then: Should throw error
+            assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, ParserConfig.defaultConfig()))
+                    .isInstanceOf(RuntimeException.class);
+        }
+
+        @Test
+        @DisplayName("Should throw error for object value on boolean field - line 289")
+        void testObjectForBooleanField() {
+            // Given: Object for boolean field
+            String json = "{\"name\":\"Test\",\"age\":30,\"active\":{}}";
+
+            // When/Then: Should throw type mismatch (covers parseValue line 289)
             assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, ParserConfig.defaultConfig()))
                     .isInstanceOf(RuntimeException.class);
         }
