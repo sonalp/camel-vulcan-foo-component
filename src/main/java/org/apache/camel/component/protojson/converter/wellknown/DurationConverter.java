@@ -107,30 +107,57 @@ public class DurationConverter implements JsonInFieldConverter, JsonOutFieldConv
 
     // ==================== Proto -> JSON ====================
 
+    /**
+     * Pre-computed powers of 10 for fast nano digit extraction.
+     * Index i gives 10^(8-i), used to extract digits from left to right.
+     */
+    private static final int[] POWERS_OF_10 = {
+            100_000_000, 10_000_000, 1_000_000, 100_000, 10_000, 1_000, 100, 10, 1
+    };
+
     @Override
     public void write(JsonGenerator gen, Message message,
                       Descriptors.FieldDescriptor field) throws IOException {
         Message durMsg = (Message) message.getField(field);
-        
+
         Descriptors.Descriptor desc = durMsg.getDescriptorForType();
         long seconds = (Long) durMsg.getField(desc.findFieldByName("seconds"));
         int nanos = (Integer) durMsg.getField(desc.findFieldByName("nanos"));
 
-        StringBuilder sb = new StringBuilder();
-        sb.append(seconds);
-        
+        // Performance: Direct char buffer approach - avoids String.format() allocation
+        // Maximum length: "-9223372036854775808.123456789s" = 32 chars
+        char[] buffer = new char[32];
+        int pos = 0;
+
+        // Write seconds part
+        String secsStr = Long.toString(seconds);
+        int secsLen = secsStr.length();
+        secsStr.getChars(0, secsLen, buffer, 0);
+        pos = secsLen;
+
+        // Write nanos part if non-zero
         if (nanos != 0) {
-            sb.append(".");
-            String nanoStr = String.format("%09d", Math.abs(nanos));
-            // Trim trailing zeros
-            int end = 9;
-            while (end > 1 && nanoStr.charAt(end - 1) == '0') {
-                end--;
+            buffer[pos++] = '.';
+
+            int absNanos = Math.abs(nanos);
+
+            // Extract 9 digits using division (avoids String.format allocation)
+            int nanoStart = pos;
+            for (int power : POWERS_OF_10) {
+                buffer[pos++] = (char) ('0' + (absNanos / power));
+                absNanos %= power;
             }
-            sb.append(nanoStr, 0, end);
+
+            // Trim trailing zeros (but keep at least one digit after decimal)
+            int nanoEnd = pos;
+            while (nanoEnd > nanoStart + 1 && buffer[nanoEnd - 1] == '0') {
+                nanoEnd--;
+            }
+            pos = nanoEnd;
         }
-        sb.append("s");
-        
-        gen.writeString(sb.toString());
+
+        buffer[pos++] = 's';
+
+        gen.writeString(new String(buffer, 0, pos));
     }
 }

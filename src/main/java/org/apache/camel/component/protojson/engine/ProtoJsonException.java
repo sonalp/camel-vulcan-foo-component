@@ -9,7 +9,11 @@ public class ProtoJsonException extends IOException {
         UNKNOWN_FIELD,
         INVALID_ENUM_VALUE,
         TYPE_MISMATCH,
-        CUSTOM_CONVERTER_ERROR
+        CUSTOM_CONVERTER_ERROR,
+        /** Security: Maximum nesting depth exceeded */
+        NESTING_TOO_DEEP,
+        /** Security: Repeated field size limit exceeded */
+        REPEATED_FIELD_TOO_LARGE
     }
 
     private final ErrorCode code;

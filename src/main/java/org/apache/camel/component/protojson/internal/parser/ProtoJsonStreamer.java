@@ -22,8 +22,18 @@ import java.io.IOException;
  *
  * <p><strong>INTERNAL USE ONLY</strong> - This class is not part of the public API
  * and may change without notice.
+ *
+ * <p><strong>Security features:</strong>
+ * <ul>
+ *   <li>Maximum nesting depth limit (prevents stack overflow attacks)</li>
+ *   <li>Maximum repeated field size limit (prevents memory exhaustion attacks)</li>
+ *   <li>Optimized Base64 decoding with reused decoder instance</li>
+ * </ul>
  */
 public final class ProtoJsonStreamer {
+
+    /** Reusable Base64 decoder - thread-safe and avoids repeated instantiation */
+    private static final java.util.Base64.Decoder BASE64_DECODER = java.util.Base64.getDecoder();
 
     private ProtoJsonStreamer() {}
 
@@ -123,8 +133,14 @@ public final class ProtoJsonStreamer {
             JsonToProtoContext ctx) throws IOException, ProtoJsonException {
 
         if (t == JsonToken.START_ARRAY) {
+            int elementCount = 0;
+            String fieldName = fm.fd.getFullName();
+
             while ((t = p.nextToken()) != JsonToken.END_ARRAY) {
+                // Security check: limit array size to prevent memory exhaustion
+                ctx.checkRepeatedFieldSize(elementCount, fieldName);
                 addRepeatedElement(p, t, fm, builder, ctx);
+                elementCount++;
             }
         } else {
             addRepeatedElement(p, t, fm, builder, ctx);
@@ -292,7 +308,8 @@ public final class ProtoJsonStreamer {
                 if (!t.isScalarValue()) throw typeMismatch(fd, "bytes (base64)");
                 String base64 = p.getValueAsString();
                 try {
-                    byte[] decoded = java.util.Base64.getDecoder().decode(base64);
+                    // Performance: Use static decoder instance (thread-safe)
+                    byte[] decoded = BASE64_DECODER.decode(base64);
                     yield com.google.protobuf.ByteString.copyFrom(decoded);
                 } catch (IllegalArgumentException e) {
                     throw new ProtoJsonException(
@@ -304,13 +321,19 @@ public final class ProtoJsonStreamer {
             }
             case ENUM -> parseEnumValue(p, t, fd, ctx.getParserConfig());
             case MESSAGE -> {
-                // Use cached MessageMeta from FieldMeta (no registry lookup!)
-                MessageMeta nestedMeta = fm.nestedMeta;
-                Message.Builder nestedBuilder = nestedMeta.newBuilder();
-                Descriptors.Descriptor nestedDesc = fd.getMessageType();
-                MessageTypeConverter conv = ctx.getRegistry().get(nestedDesc);
-                conv.mergeInto(p, nestedDesc, nestedBuilder, ctx);
-                yield nestedBuilder.build();
+                // Security: Check nesting depth before recursing
+                ctx.enterNested(fd.getFullName());
+                try {
+                    // Use cached MessageMeta from FieldMeta (no registry lookup!)
+                    MessageMeta nestedMeta = fm.nestedMeta;
+                    Message.Builder nestedBuilder = nestedMeta.newBuilder();
+                    Descriptors.Descriptor nestedDesc = fd.getMessageType();
+                    MessageTypeConverter conv = ctx.getRegistry().get(nestedDesc);
+                    conv.mergeInto(p, nestedDesc, nestedBuilder, ctx);
+                    yield nestedBuilder.build();
+                } finally {
+                    ctx.exitNested();
+                }
             }
         };
     }
