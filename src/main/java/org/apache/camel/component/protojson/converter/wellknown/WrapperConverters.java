@@ -17,6 +17,7 @@ import com.google.protobuf.UInt64Value;
 import com.google.protobuf.ByteString;
 import org.apache.camel.component.protojson.converter.JsonInFieldConverter;
 import org.apache.camel.component.protojson.converter.JsonOutFieldConverter;
+import org.apache.camel.component.protojson.internal.parser.WrapperParsers;
 
 import java.io.IOException;
 import java.util.Base64;
@@ -75,80 +76,7 @@ public class WrapperConverters implements JsonInFieldConverter, JsonOutFieldConv
     }
 
     private Message parseWrapper(JsonParser parser, JsonToken token, String typeName) throws IOException {
-        return switch (typeName) {
-            case "google.protobuf.StringValue" -> {
-                if (token.isScalarValue()) {
-                    yield StringValue.of(parser.getValueAsString());
-                }
-                throw new IOException("Expected string for StringValue");
-            }
-            case "google.protobuf.BytesValue" -> {
-                if (token == JsonToken.VALUE_STRING) {
-                    byte[] bytes = Base64.getDecoder().decode(parser.getText());
-                    yield BytesValue.of(ByteString.copyFrom(bytes));
-                }
-                throw new IOException("Expected base64 string for BytesValue");
-            }
-            case "google.protobuf.BoolValue" -> {
-                if (token == JsonToken.VALUE_TRUE) {
-                    yield BoolValue.of(true);
-                } else if (token == JsonToken.VALUE_FALSE) {
-                    yield BoolValue.of(false);
-                } else if (token.isScalarValue()) {
-                    yield BoolValue.of(Boolean.parseBoolean(parser.getValueAsString()));
-                }
-                throw new IOException("Expected boolean for BoolValue");
-            }
-            case "google.protobuf.Int32Value" -> {
-                if (token.isNumeric()) {
-                    yield Int32Value.of(parser.getIntValue());
-                } else if (token.isScalarValue()) {
-                    yield Int32Value.of(Integer.parseInt(parser.getValueAsString()));
-                }
-                throw new IOException("Expected integer for Int32Value");
-            }
-            case "google.protobuf.Int64Value" -> {
-                if (token.isNumeric()) {
-                    yield Int64Value.of(parser.getLongValue());
-                } else if (token.isScalarValue()) {
-                    yield Int64Value.of(Long.parseLong(parser.getValueAsString()));
-                }
-                throw new IOException("Expected long for Int64Value");
-            }
-            case "google.protobuf.UInt32Value" -> {
-                if (token.isNumeric()) {
-                    yield UInt32Value.of(parser.getIntValue());
-                } else if (token.isScalarValue()) {
-                    yield UInt32Value.of(Integer.parseUnsignedInt(parser.getValueAsString()));
-                }
-                throw new IOException("Expected unsigned integer for UInt32Value");
-            }
-            case "google.protobuf.UInt64Value" -> {
-                if (token.isNumeric()) {
-                    yield UInt64Value.of(parser.getLongValue());
-                } else if (token.isScalarValue()) {
-                    yield UInt64Value.of(Long.parseUnsignedLong(parser.getValueAsString()));
-                }
-                throw new IOException("Expected unsigned long for UInt64Value");
-            }
-            case "google.protobuf.FloatValue" -> {
-                if (token.isNumeric()) {
-                    yield FloatValue.of((float) parser.getDoubleValue());
-                } else if (token.isScalarValue()) {
-                    yield FloatValue.of(Float.parseFloat(parser.getValueAsString()));
-                }
-                throw new IOException("Expected float for FloatValue");
-            }
-            case "google.protobuf.DoubleValue" -> {
-                if (token.isNumeric()) {
-                    yield DoubleValue.of(parser.getDoubleValue());
-                } else if (token.isScalarValue()) {
-                    yield DoubleValue.of(Double.parseDouble(parser.getValueAsString()));
-                }
-                throw new IOException("Expected double for DoubleValue");
-            }
-            default -> throw new IOException("Unknown wrapper type: " + typeName);
-        };
+        return WrapperParsers.parseWrapper(parser, token, typeName);
     }
 
     // ==================== Proto -> JSON ====================

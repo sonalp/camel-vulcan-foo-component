@@ -408,8 +408,8 @@ class ProtoJsonStreamerCustomConverterTest {
 
             // When/Then: Should throw ProtoJsonException (covers convertMapKey line 356-360)
             assertThatThrownBy(() -> parseWithConfig(json, UserWithMetadata.class, ParserConfig.defaultConfig()))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessageContaining("Parse failed");
+                    .isInstanceOf(ProtoJsonException.class)
+                    .hasMessageContaining("not-a-number");
         }
 
         @Test
@@ -420,7 +420,7 @@ class ProtoJsonStreamerCustomConverterTest {
 
             // When/Then: Should throw error
             assertThatThrownBy(() -> parseWithConfig(json, UserWithMetadata.class, ParserConfig.defaultConfig()))
-                    .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(ProtoJsonException.class);
         }
     }
 
@@ -436,8 +436,8 @@ class ProtoJsonStreamerCustomConverterTest {
 
             // When/Then: Should throw type mismatch (covers parseValue line 263)
             assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, ParserConfig.defaultConfig()))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessageContaining("Parse failed");
+                    .isInstanceOf(ProtoJsonException.class)
+                    .hasMessageContaining("Expected string ");
         }
 
         @Test
@@ -448,8 +448,8 @@ class ProtoJsonStreamerCustomConverterTest {
 
             // When/Then: Should throw type mismatch (covers parseValue line 269)
             assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, ParserConfig.defaultConfig()))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessageContaining("Parse failed");
+                    .isInstanceOf(ProtoJsonException.class)
+                    .hasMessageContaining("Expected int32");
         }
 
         @Test
@@ -460,7 +460,7 @@ class ProtoJsonStreamerCustomConverterTest {
 
             // When/Then: Should throw error
             assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, ParserConfig.defaultConfig()))
-                    .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(ProtoJsonException.class);
         }
 
         @Test
@@ -471,7 +471,7 @@ class ProtoJsonStreamerCustomConverterTest {
 
             // When/Then: Should throw type mismatch (covers parseValue line 289)
             assertThatThrownBy(() -> parseWithConfig(json, SimpleUser.class, ParserConfig.defaultConfig()))
-                    .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(ProtoJsonException.class);
         }
     }
 

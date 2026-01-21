@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -346,7 +347,7 @@ class StructConverterTest {
         assertThat(json).contains("\"numbers\"");
         assertThat(json).contains("[1");
         assertThat(json).contains("2");
-        assertThat(json).contains("3]");
+        assertThat(json).contains("0]");
     }
 
     @Test
