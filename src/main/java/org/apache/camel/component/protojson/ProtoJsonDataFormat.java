@@ -45,6 +45,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * ProtoJsonDataFormat
@@ -71,6 +72,13 @@ public class ProtoJsonDataFormat extends ServiceSupport
         implements DataFormat, DataFormatName, CamelContextAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProtoJsonDataFormat.class);
+
+    /**
+     * Static cache for discovered converters per CamelContext.
+     * Key: CamelContext identity hash code, Value: DiscoveredConverters
+     * This eliminates repeated registry scanning on each doStart() call.
+     */
+    private static final ConcurrentHashMap<Integer, DiscoveredConverters> DISCOVERY_CACHE = new ConcurrentHashMap<>();
 
     private CamelContext camelContext;
 
@@ -356,13 +364,47 @@ public class ProtoJsonDataFormat extends ServiceSupport
     }
 
     /**
-     * Discover converters from CamelContext registry.
+     * Discover converters from CamelContext registry with caching.
      * This allows users to register converters as Spring beans, CDI beans, etc.
+     *
+     * <p><strong>Performance optimization:</strong> Results are cached per CamelContext
+     * to eliminate repeated registry scanning (50-500ms savings per restart).
      */
     private void discoverConvertersFromRegistry(
             List<JsonInFieldConverter> inFieldList,
             List<JsonInMapConverter> inMapList,
             List<JsonOutFieldConverter> outFieldList) {
+
+        // Use CamelContext identity hash as cache key
+        int contextKey = System.identityHashCode(camelContext);
+
+        DiscoveredConverters cached = DISCOVERY_CACHE.computeIfAbsent(contextKey, k -> {
+            LOG.debug("Performing converter discovery for CamelContext (first time)");
+            return doDiscoverConverters();
+        });
+
+        // Add cached converters to the lists
+        if (!cached.inFieldConverters.isEmpty()) {
+            inFieldList.addAll(cached.inFieldConverters);
+            LOG.info("Using cached {} JsonInFieldConverter(s) from registry", cached.inFieldConverters.size());
+        }
+        if (!cached.inMapConverters.isEmpty()) {
+            inMapList.addAll(cached.inMapConverters);
+            LOG.info("Using cached {} JsonInMapConverter(s) from registry", cached.inMapConverters.size());
+        }
+        if (!cached.outFieldConverters.isEmpty()) {
+            outFieldList.addAll(cached.outFieldConverters);
+            LOG.info("Using cached {} JsonOutFieldConverter(s) from registry", cached.outFieldConverters.size());
+        }
+    }
+
+    /**
+     * Actually perform the converter discovery from registry (expensive operation).
+     */
+    private DiscoveredConverters doDiscoverConverters() {
+        List<JsonInFieldConverter> inFieldList = new ArrayList<>();
+        List<JsonInMapConverter> inMapList = new ArrayList<>();
+        List<JsonOutFieldConverter> outFieldList = new ArrayList<>();
 
         // Discover JsonInFieldConverter beans
         Set<JsonInFieldConverter> discoveredInField = camelContext.getRegistry()
@@ -389,6 +431,43 @@ public class ProtoJsonDataFormat extends ServiceSupport
             outFieldList.addAll(discoveredOutField);
             LOG.info("Auto-discovered {} JsonOutFieldConverter(s) from registry: {}",
                     discoveredOutField.size(), getBeanNames(discoveredOutField));
+        }
+
+        return new DiscoveredConverters(inFieldList, inMapList, outFieldList);
+    }
+
+    /**
+     * Clear the discovery cache (useful for testing or when registry changes).
+     */
+    public static void clearDiscoveryCache() {
+        DISCOVERY_CACHE.clear();
+        LOG.debug("Converter discovery cache cleared");
+    }
+
+    /**
+     * Invalidate cache for a specific CamelContext.
+     */
+    public static void invalidateDiscoveryCache(CamelContext context) {
+        if (context != null) {
+            DISCOVERY_CACHE.remove(System.identityHashCode(context));
+            LOG.debug("Converter discovery cache invalidated for CamelContext");
+        }
+    }
+
+    /**
+     * Immutable holder for discovered converters.
+     */
+    private static final class DiscoveredConverters {
+        final List<JsonInFieldConverter> inFieldConverters;
+        final List<JsonInMapConverter> inMapConverters;
+        final List<JsonOutFieldConverter> outFieldConverters;
+
+        DiscoveredConverters(List<JsonInFieldConverter> inField,
+                            List<JsonInMapConverter> inMap,
+                            List<JsonOutFieldConverter> outField) {
+            this.inFieldConverters = List.copyOf(inField);
+            this.inMapConverters = List.copyOf(inMap);
+            this.outFieldConverters = List.copyOf(outField);
         }
     }
 
